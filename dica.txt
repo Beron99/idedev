@@ -20,3 +20,5 @@ git checkout -b minha-feature
 git add .
 git commit -m "feat: adiciona X"
 git push -u origin minha-feature
+
+...
