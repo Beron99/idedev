@@ -1,0 +1,14 @@
+# ver mudanças locais
+git status
+
+# adicionar alterações
+git add .
+
+# commitar
+git commit -m "Descrição do que mudou"
+
+# trazer alterações remotas antes de enviar (bom pra evitar conflitos)
+git pull --rebase origin main
+
+# enviar pro GitHub
+git push
