@@ -4,6 +4,9 @@ require_once 'config.php';
 $mensagem = '';
 $tipo_mensagem = '';
 
+// Gerar token CSRF antes de processar o formulário
+$csrf_token = gerarTokenCSRF();
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Validar token CSRF
     if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
@@ -67,9 +70,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 }
-
-// Gerar token CSRF
-$csrf_token = gerarTokenCSRF();
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
