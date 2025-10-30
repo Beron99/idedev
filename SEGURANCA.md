@@ -225,4 +225,18 @@ DB_PASS=sua_senha_forte
 ---
 
 **Última atualização:** 2025-10-29
+**Status:** ✅ TODAS AS PROTEÇÕES ATIVAS (9/10)
 **Responsável:** Claude Code
+
+---
+
+## 📝 NOTAS IMPORTANTES
+
+### Problema de Cache Resolvido
+Se aparecer erro "Token de segurança inválido", faça:
+1. **Ctrl + Shift + Delete** (Limpar cache do navegador)
+2. Limpar cookies do site
+3. Fechar e reabrir o navegador
+4. Tentar novamente
+
+**Isso NÃO é bug!** É a proteção CSRF funcionando corretamente. O cache antigo guarda formulários sem token.
