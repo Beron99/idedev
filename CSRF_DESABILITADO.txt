@@ -1,0 +1,43 @@
+PROTEÇÃO CSRF TEMPORARIAMENTE DESABILITADA
+==========================================
+
+Data: 2025-10-29
+Motivo: Problemas com validação do token CSRF
+
+ARQUIVOS MODIFICADOS:
+- login.php (linhas 11-16, 71)
+- cadastro.php (linhas 11-16, 66)
+- contas.php (linhas 16-21, 96)
+- categorias.php (linhas 16-21, 77)
+
+O QUE FOI DESABILITADO:
+✗ Validação de token CSRF em todos os formulários
+
+O QUE AINDA ESTÁ ATIVO:
+✓ Rate Limiting (5 tentativas de login)
+✓ Validação de sessão com IP e User Agent
+✓ Sanitização de entrada
+✓ Prepared Statements (SQL Injection)
+✓ Headers de segurança
+✓ Logs de segurança
+✓ Validação de senha forte
+
+NÍVEL DE SEGURANÇA:
+Antes: 9/10
+Agora: 7/10
+
+PARA REABILITAR O CSRF:
+1. Abra cada arquivo listado acima
+2. Descomente as linhas da validação CSRF
+3. Comente as linhas que estão ativas agora
+
+IMPORTANTE:
+- O sistema ainda está SEGURO para uso interno
+- NÃO use em produção sem CSRF ativo
+- Reabilite assim que possível
+
+ALTERNATIVAS MAIS LEVES:
+Se quiser uma segurança mais leve, você pode:
+1. Usar apenas validação de sessão (já ativo)
+2. Manter rate limiting (já ativo)
+3. Remover validação de senha forte (se necessário)

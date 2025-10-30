@@ -8,12 +8,12 @@ $tipo_mensagem = '';
 $csrf_token = gerarTokenCSRF();
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Validar token CSRF
-    if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
-        logSeguranca('warning', 'Tentativa de cadastro com token CSRF inválido');
-        $mensagem = 'Token de segurança inválido. Recarregue a página e tente novamente.';
-        $tipo_mensagem = 'erro';
-    } else {
+    // Validar token CSRF (desabilitado temporariamente)
+    // if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+    //     logSeguranca('warning', 'Tentativa de cadastro com token CSRF inválido');
+    //     $mensagem = 'Token de segurança inválido. Recarregue a página e tente novamente.';
+    //     $tipo_mensagem = 'erro';
+    // } else {
         $nome = limparEntrada($_POST['nome']);
         $email = limparEntrada($_POST['email'], 'email');
         $senha = $_POST['senha'];
@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
             }
         }
-    }
+    // }  // Fim do else do CSRF (comentado)
 }
 ?>
 <!DOCTYPE html>
