@@ -13,55 +13,72 @@ $tipo_mensagem = '';
 
 // Processar ações
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $acao = $_POST['acao'] ?? '';
+    // Validar token CSRF
+    if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+        logSeguranca('warning', 'Tentativa de ação em categorias com token CSRF inválido', $usuario_id);
+        $mensagem = 'Token de segurança inválido!';
+        $tipo_mensagem = 'erro';
+    } else {
+        $acao = $_POST['acao'] ?? '';
 
-    try {
-        if ($acao == 'adicionar') {
-            $nome = trim($_POST['nome']);
-            $descricao = trim($_POST['descricao']);
-            $cor = $_POST['cor'];
+        try {
+            if ($acao == 'adicionar') {
+                $nome = limparEntrada($_POST['nome']);
+                $descricao = limparEntrada($_POST['descricao']);
+                $cor = $_POST['cor'];
 
             $stmt = $pdo->prepare("INSERT INTO categorias (nome, descricao, cor, usuario_id) VALUES (?, ?, ?, ?)");
             $stmt->execute([$nome, $descricao, $cor, $usuario_id]);
 
-            $mensagem = 'Categoria adicionada com sucesso!';
-            $tipo_mensagem = 'sucesso';
+                logSeguranca('info', "Categoria adicionada: $nome", $usuario_id);
 
-        } elseif ($acao == 'editar') {
-            $id = intval($_POST['id']);
-            $nome = trim($_POST['nome']);
-            $descricao = trim($_POST['descricao']);
-            $cor = $_POST['cor'];
+                $mensagem = 'Categoria adicionada com sucesso!';
+                $tipo_mensagem = 'sucesso';
+
+            } elseif ($acao == 'editar') {
+                $id = intval($_POST['id']);
+                $nome = limparEntrada($_POST['nome']);
+                $descricao = limparEntrada($_POST['descricao']);
+                $cor = $_POST['cor'];
 
             $stmt = $pdo->prepare("UPDATE categorias SET nome = ?, descricao = ?, cor = ? WHERE id = ? AND usuario_id = ?");
             $stmt->execute([$nome, $descricao, $cor, $id, $usuario_id]);
 
-            $mensagem = 'Categoria atualizada com sucesso!';
-            $tipo_mensagem = 'sucesso';
+                logSeguranca('info', "Categoria editada ID: $id", $usuario_id);
 
-        } elseif ($acao == 'excluir') {
-            $id = intval($_POST['id']);
+                $mensagem = 'Categoria atualizada com sucesso!';
+                $tipo_mensagem = 'sucesso';
 
-            // Verificar se há contas usando esta categoria
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM contas_pagar WHERE categoria_id = ? AND usuario_id = ?");
-            $stmt->execute([$id, $usuario_id]);
+            } elseif ($acao == 'excluir') {
+                $id = intval($_POST['id']);
 
-            if ($stmt->fetchColumn() > 0) {
-                $mensagem = 'Não é possível excluir esta categoria pois existem contas vinculadas a ela.';
-                $tipo_mensagem = 'erro';
-            } else {
-                $stmt = $pdo->prepare("DELETE FROM categorias WHERE id = ? AND usuario_id = ?");
+                // Verificar se há contas usando esta categoria
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM contas_pagar WHERE categoria_id = ? AND usuario_id = ?");
                 $stmt->execute([$id, $usuario_id]);
 
-                $mensagem = 'Categoria excluída com sucesso!';
-                $tipo_mensagem = 'sucesso';
+                if ($stmt->fetchColumn() > 0) {
+                    $mensagem = 'Não é possível excluir esta categoria pois existem contas vinculadas a ela.';
+                    $tipo_mensagem = 'erro';
+                } else {
+                    $stmt = $pdo->prepare("DELETE FROM categorias WHERE id = ? AND usuario_id = ?");
+                    $stmt->execute([$id, $usuario_id]);
+
+                    logSeguranca('info', "Categoria excluída ID: $id", $usuario_id);
+
+                    $mensagem = 'Categoria excluída com sucesso!';
+                    $tipo_mensagem = 'sucesso';
+                }
             }
+        } catch(PDOException $e) {
+            logSeguranca('error', 'Erro em categorias: ' . $e->getMessage(), $usuario_id);
+            $mensagem = 'Erro ao processar ação. Tente novamente.';
+            $tipo_mensagem = 'erro';
         }
-    } catch(PDOException $e) {
-        $mensagem = 'Erro: ' . $e->getMessage();
-        $tipo_mensagem = 'erro';
     }
 }
+
+// Gerar token CSRF
+$csrf_token = gerarTokenCSRF();
 
 // Buscar categorias com estatísticas
 $stmt = $pdo->prepare("
@@ -154,6 +171,7 @@ $categorias = $stmt->fetchAll();
             <span class="modal-close" onclick="fecharModal()">&times;</span>
             <h2 id="modalTitulo">Nova Categoria</h2>
             <form method="POST" action="" id="formCategoria">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                 <input type="hidden" name="acao" id="formAcao" value="adicionar">
                 <input type="hidden" name="id" id="formId">
 
@@ -213,6 +231,7 @@ $categorias = $stmt->fetchAll();
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.innerHTML = `
+                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                     <input type="hidden" name="acao" value="excluir">
                     <input type="hidden" name="id" value="${id}">
                 `;

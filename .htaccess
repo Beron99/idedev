@@ -1,0 +1,104 @@
+# Segurança - Apache
+
+# Desabilitar listagem de diretórios
+Options -Indexes
+
+# Proteger arquivos sensíveis
+<FilesMatch "^(config\.php|security\.php|\.env|\.git.*|composer\.(json|lock))$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Proteger diretório de logs
+<DirectoryMatch "^.*/logs/.*$">
+    Order allow,deny
+    Deny from all
+</DirectoryMatch>
+
+# Prevenir acesso a arquivos ocultos
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Configurações PHP para segurança
+<IfModule mod_php7.c>
+    php_flag display_errors Off
+    php_flag log_errors On
+    php_flag expose_php Off
+    php_value session.cookie_httponly 1
+    php_value session.cookie_secure 1
+    php_value session.use_strict_mode 1
+</IfModule>
+
+# Headers de segurança (alternativa caso mod_headers esteja disponível)
+<IfModule mod_headers.c>
+    # Prevenir clickjacking
+    Header always set X-Frame-Options "DENY"
+
+    # Prevenir MIME sniffing
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Proteção XSS
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # Referrer Policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Content Security Policy
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:;"
+
+    # Remover informações do servidor
+    Header unset Server
+    Header unset X-Powered-By
+</IfModule>
+
+# Forçar HTTPS (descomente se tiver SSL)
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{HTTPS} off
+#     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>
+
+# Prevenir SQL Injection via URL
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{QUERY_STRING} [a-zA-Z0-9_]=http:// [OR]
+    RewriteCond %{QUERY_STRING} [a-zA-Z0-9_]=(\.\.//?)+ [OR]
+    RewriteCond %{QUERY_STRING} [a-zA-Z0-9_]=/([a-z0-9_.]//?)+ [NC,OR]
+    RewriteCond %{QUERY_STRING} \=PHP[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} [NC,OR]
+    RewriteCond %{QUERY_STRING} (\.\./|\.\.) [OR]
+    RewriteCond %{QUERY_STRING} ftp\: [NC,OR]
+    RewriteCond %{QUERY_STRING} http\: [NC,OR]
+    RewriteCond %{QUERY_STRING} https\: [NC,OR]
+    RewriteCond %{QUERY_STRING} \=\|w\| [NC,OR]
+    RewriteCond %{QUERY_STRING} ^(.*)/self/(.*)$ [NC,OR]
+    RewriteCond %{QUERY_STRING} ^(.*)cPath=http://(.*)$ [NC,OR]
+    RewriteCond %{QUERY_STRING} (\<|%3C).*script.*(\>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} (\<|%3C).*iframe.*(\>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} (<|%3C)([^i]*i)+frame.*(>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} base64_encode.*\(.*\) [NC,OR]
+    RewriteCond %{QUERY_STRING} base64_(en|de)code[^(]*\([^)]*\) [NC,OR]
+    RewriteCond %{QUERY_STRING} GLOBALS(=|\[|\%[0-9A-Z]{0,2}) [OR]
+    RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2}) [OR]
+    RewriteCond %{QUERY_STRING} ^.*(\[|\]|\(|\)|<|>|ê|"|;|\?|\*|=$).* [NC,OR]
+    RewriteCond %{QUERY_STRING} (NULL|OUTFILE|LOAD_FILE) [OR]
+    RewriteCond %{QUERY_STRING} (\.{1,}/)+(motd|etc|bin) [NC,OR]
+    RewriteCond %{QUERY_STRING} (localhost|loopback|127\.0\.0\.1) [NC,OR]
+    RewriteCond %{QUERY_STRING} (<|>|'|%0A|%0D|%27|%3C|%3E|%00) [NC,OR]
+    RewriteCond %{QUERY_STRING} concat[^\(]*\( [NC,OR]
+    RewriteCond %{QUERY_STRING} union([^s]*s)+elect [NC,OR]
+    RewriteCond %{QUERY_STRING} union([^a]*a)+ll([^s]*s)+elect [NC,OR]
+    RewriteCond %{QUERY_STRING} (;|<|>|'|"|\)|%0A|%0D|%22|%27|%3C|%3E|%00).*(/\*|union|select|insert|drop|delete|update|cast|create|char|convert|alter|declare|order|script|set|md5|benchmark|encode) [NC,OR]
+    RewriteCond %{QUERY_STRING} (sp_executesql) [NC]
+    RewriteRule ^(.*)$ - [F,L]
+</IfModule>
+
+# Limite de tamanho de upload (10MB)
+php_value upload_max_filesize 10M
+php_value post_max_size 10M
+
+# Timeout
+php_value max_execution_time 30
+php_value max_input_time 30

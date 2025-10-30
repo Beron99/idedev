@@ -1,0 +1,37 @@
+# Arquivos sensíveis
+config.php
+.env
+*.log
+
+# Diretórios de log
+logs/
+*.log
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.cache
+
+# Uploads
+uploads/
+anexos/
+
+# Dependências
+vendor/
+node_modules/
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-*
+
+# Sistema Operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backups
+*.bak
+*.backup
+*.sql.gz
+*.zip

@@ -13,59 +13,91 @@ $tipo_mensagem = '';
 
 // Processar ações (adicionar, editar, excluir, marcar como pago)
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $acao = $_POST['acao'] ?? '';
+    // Validar token CSRF
+    if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+        logSeguranca('warning', 'Tentativa de ação em contas com token CSRF inválido', $usuario_id);
+        $mensagem = 'Token de segurança inválido!';
+        $tipo_mensagem = 'erro';
+    } else {
+        $acao = $_POST['acao'] ?? '';
 
-    try {
-        if ($acao == 'adicionar') {
-            $descricao = trim($_POST['descricao']);
-            $valor = floatval(str_replace(',', '.', str_replace('.', '', $_POST['valor'])));
-            $data_vencimento = $_POST['data_vencimento'];
-            $categoria_id = $_POST['categoria_id'] ?: null;
-            $observacoes = trim($_POST['observacoes']);
+        try {
+            if ($acao == 'adicionar') {
+                $descricao = limparEntrada($_POST['descricao']);
+                $valor = floatval(str_replace(',', '.', str_replace('.', '', $_POST['valor'])));
+                $data_vencimento = $_POST['data_vencimento'];
+                $categoria_id = intval($_POST['categoria_id']) ?: null;
+                $observacoes = limparEntrada($_POST['observacoes']);
+
+                // Validar valor positivo
+                if ($valor <= 0) {
+                    throw new Exception('O valor deve ser maior que zero');
+                }
 
             $stmt = $pdo->prepare("INSERT INTO contas_pagar (usuario_id, categoria_id, descricao, valor, data_vencimento, observacoes) VALUES (?, ?, ?, ?, ?, ?)");
             $stmt->execute([$usuario_id, $categoria_id, $descricao, $valor, $data_vencimento, $observacoes]);
 
-            $mensagem = 'Conta adicionada com sucesso!';
-            $tipo_mensagem = 'sucesso';
+                logSeguranca('info', "Conta adicionada: $descricao (R$ $valor)", $usuario_id);
 
-        } elseif ($acao == 'editar') {
-            $id = intval($_POST['id']);
-            $descricao = trim($_POST['descricao']);
-            $valor = floatval(str_replace(',', '.', str_replace('.', '', $_POST['valor'])));
-            $data_vencimento = $_POST['data_vencimento'];
-            $categoria_id = $_POST['categoria_id'] ?: null;
-            $observacoes = trim($_POST['observacoes']);
+                $mensagem = 'Conta adicionada com sucesso!';
+                $tipo_mensagem = 'sucesso';
+
+            } elseif ($acao == 'editar') {
+                $id = intval($_POST['id']);
+                $descricao = limparEntrada($_POST['descricao']);
+                $valor = floatval(str_replace(',', '.', str_replace('.', '', $_POST['valor'])));
+                $data_vencimento = $_POST['data_vencimento'];
+                $categoria_id = intval($_POST['categoria_id']) ?: null;
+                $observacoes = limparEntrada($_POST['observacoes']);
+
+                // Validar valor positivo
+                if ($valor <= 0) {
+                    throw new Exception('O valor deve ser maior que zero');
+                }
 
             $stmt = $pdo->prepare("UPDATE contas_pagar SET descricao = ?, valor = ?, data_vencimento = ?, categoria_id = ?, observacoes = ? WHERE id = ? AND usuario_id = ?");
             $stmt->execute([$descricao, $valor, $data_vencimento, $categoria_id, $observacoes, $id, $usuario_id]);
 
-            $mensagem = 'Conta atualizada com sucesso!';
-            $tipo_mensagem = 'sucesso';
+                logSeguranca('info', "Conta editada ID: $id", $usuario_id);
 
-        } elseif ($acao == 'excluir') {
-            $id = intval($_POST['id']);
-            $stmt = $pdo->prepare("DELETE FROM contas_pagar WHERE id = ? AND usuario_id = ?");
-            $stmt->execute([$id, $usuario_id]);
+                $mensagem = 'Conta atualizada com sucesso!';
+                $tipo_mensagem = 'sucesso';
 
-            $mensagem = 'Conta excluída com sucesso!';
-            $tipo_mensagem = 'sucesso';
+            } elseif ($acao == 'excluir') {
+                $id = intval($_POST['id']);
+                $stmt = $pdo->prepare("DELETE FROM contas_pagar WHERE id = ? AND usuario_id = ?");
+                $stmt->execute([$id, $usuario_id]);
 
-        } elseif ($acao == 'pagar') {
-            $id = intval($_POST['id']);
-            $data_pagamento = $_POST['data_pagamento'] ?? date('Y-m-d');
+                logSeguranca('info', "Conta excluída ID: $id", $usuario_id);
 
-            $stmt = $pdo->prepare("UPDATE contas_pagar SET status = 'pago', data_pagamento = ? WHERE id = ? AND usuario_id = ?");
-            $stmt->execute([$data_pagamento, $id, $usuario_id]);
+                $mensagem = 'Conta excluída com sucesso!';
+                $tipo_mensagem = 'sucesso';
 
-            $mensagem = 'Conta marcada como paga!';
-            $tipo_mensagem = 'sucesso';
+            } elseif ($acao == 'pagar') {
+                $id = intval($_POST['id']);
+                $data_pagamento = $_POST['data_pagamento'] ?? date('Y-m-d');
+
+                $stmt = $pdo->prepare("UPDATE contas_pagar SET status = 'pago', data_pagamento = ? WHERE id = ? AND usuario_id = ?");
+                $stmt->execute([$data_pagamento, $id, $usuario_id]);
+
+                logSeguranca('info', "Conta paga ID: $id", $usuario_id);
+
+                $mensagem = 'Conta marcada como paga!';
+                $tipo_mensagem = 'sucesso';
+            }
+        } catch(PDOException $e) {
+            logSeguranca('error', 'Erro em contas: ' . $e->getMessage(), $usuario_id);
+            $mensagem = 'Erro ao processar ação. Tente novamente.';
+            $tipo_mensagem = 'erro';
+        } catch(Exception $e) {
+            $mensagem = $e->getMessage();
+            $tipo_mensagem = 'erro';
         }
-    } catch(PDOException $e) {
-        $mensagem = 'Erro: ' . $e->getMessage();
-        $tipo_mensagem = 'erro';
     }
 }
+
+// Gerar token CSRF
+$csrf_token = gerarTokenCSRF();
 
 // Filtros
 $filtro_status = $_GET['status'] ?? '';
@@ -237,6 +269,7 @@ $contas = $stmt->fetchAll();
             <span class="modal-close" onclick="fecharModal()">&times;</span>
             <h2 id="modalTitulo">Nova Conta</h2>
             <form method="POST" action="" id="formConta">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                 <input type="hidden" name="acao" id="formAcao" value="adicionar">
                 <input type="hidden" name="id" id="formId">
 
@@ -309,6 +342,7 @@ $contas = $stmt->fetchAll();
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.innerHTML = `
+                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                     <input type="hidden" name="acao" value="excluir">
                     <input type="hidden" name="id" value="${id}">
                 `;
@@ -323,6 +357,7 @@ $contas = $stmt->fetchAll();
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.innerHTML = `
+                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                     <input type="hidden" name="acao" value="pagar">
                     <input type="hidden" name="id" value="${id}">
                     <input type="hidden" name="data_pagamento" value="${dataPagamento || '<?php echo date('Y-m-d'); ?>'}">

@@ -5,49 +5,66 @@ $mensagem = '';
 $tipo_mensagem = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nome = trim($_POST['nome']);
-    $email = trim($_POST['email']);
-    $senha = $_POST['senha'];
-    $confirma_senha = $_POST['confirma_senha'];
-
-    // Validações
-    if (empty($nome) || empty($email) || empty($senha) || empty($confirma_senha)) {
-        $mensagem = 'Todos os campos são obrigatórios!';
-        $tipo_mensagem = 'erro';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $mensagem = 'Email inválido!';
-        $tipo_mensagem = 'erro';
-    } elseif ($senha !== $confirma_senha) {
-        $mensagem = 'As senhas não coincidem!';
-        $tipo_mensagem = 'erro';
-    } elseif (strlen($senha) < 6) {
-        $mensagem = 'A senha deve ter no mínimo 6 caracteres!';
+    // Validar token CSRF
+    if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+        logSeguranca('warning', 'Tentativa de cadastro com token CSRF inválido');
+        $mensagem = 'Token de segurança inválido. Recarregue a página e tente novamente.';
         $tipo_mensagem = 'erro';
     } else {
+        $nome = limparEntrada($_POST['nome']);
+        $email = limparEntrada($_POST['email'], 'email');
+        $senha = $_POST['senha'];
+        $confirma_senha = $_POST['confirma_senha'];
+
+        // Validações
+        if (empty($nome) || empty($email) || empty($senha) || empty($confirma_senha)) {
+            $mensagem = 'Todos os campos são obrigatórios!';
+            $tipo_mensagem = 'erro';
+        } elseif (!validarEmail($email)) {
+            $mensagem = 'Email inválido!';
+            $tipo_mensagem = 'erro';
+        } elseif ($senha !== $confirma_senha) {
+            $mensagem = 'As senhas não coincidem!';
+            $tipo_mensagem = 'erro';
+        } else {
+            // Validar senha forte
+            $validacao_senha = validarSenhaForte($senha);
+            if (!$validacao_senha['valida']) {
+                $mensagem = implode('<br>', $validacao_senha['erros']);
+                $tipo_mensagem = 'erro';
+            } else {
         try {
             // Verificar se o email já existe
             $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE email = ?");
             $stmt->execute([$email]);
 
-            if ($stmt->rowCount() > 0) {
-                $mensagem = 'Este email já está cadastrado!';
-                $tipo_mensagem = 'erro';
-            } else {
-                // Inserir novo usuário
-                $senha_hash = password_hash($senha, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)");
-                $stmt->execute([$nome, $email, $senha_hash]);
+                if ($stmt->rowCount() > 0) {
+                    $mensagem = 'Este email já está cadastrado!';
+                    $tipo_mensagem = 'erro';
+                } else {
+                    // Inserir novo usuário
+                    $senha_hash = password_hash($senha, PASSWORD_DEFAULT);
+                    $stmt = $pdo->prepare("INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)");
+                    $stmt->execute([$nome, $email, $senha_hash]);
 
-                $mensagem = 'Cadastro realizado com sucesso! Redirecionando para o login...';
-                $tipo_mensagem = 'sucesso';
-                header("refresh:2;url=login.php");
+                    logSeguranca('info', "Novo usuário cadastrado - Email: $email", $pdo->lastInsertId());
+
+                    $mensagem = 'Cadastro realizado com sucesso! Redirecionando para o login...';
+                    $tipo_mensagem = 'sucesso';
+                    header("refresh:2;url=login.php");
+                }
+            } catch(PDOException $e) {
+                logSeguranca('error', 'Erro no cadastro: ' . $e->getMessage());
+                $mensagem = 'Erro ao cadastrar. Tente novamente.';
+                $tipo_mensagem = 'erro';
             }
-        } catch(PDOException $e) {
-            $mensagem = 'Erro ao cadastrar: ' . $e->getMessage();
-            $tipo_mensagem = 'erro';
+            }
         }
     }
 }
+
+// Gerar token CSRF
+$csrf_token = gerarTokenCSRF();
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -69,6 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <?php endif; ?>
 
             <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+
                 <div class="form-group">
                     <label for="nome">Nome Completo:</label>
                     <input type="text" id="nome" name="nome" required>
