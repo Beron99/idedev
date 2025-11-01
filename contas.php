@@ -405,16 +405,31 @@ $contas = $stmt->fetchAll();
             const camposRecorrente = document.getElementById('campos_conta_recorrente');
             const hiddenRecorrente = document.getElementById('recorrente');
 
+            // Campos de data
+            const dataVencimentoNormal = document.getElementById('data_vencimento');
+            const dataVencimentoPrimeira = document.getElementById('data_vencimento_primeira');
+            const diaVencimentoRecorrente = document.getElementById('dia_vencimento_recorrente');
+
             if (tipoSelecionado === 'normal') {
                 // Mostrar campos de conta normal
                 camposNormal.style.display = 'block';
                 camposRecorrente.style.display = 'none';
                 hiddenRecorrente.value = '0';
+
+                // Habilitar validação nos campos normais
+                dataVencimentoNormal.required = true;
+                dataVencimentoPrimeira.required = false;
+                diaVencimentoRecorrente.required = false;
             } else {
                 // Mostrar campos de conta recorrente
                 camposNormal.style.display = 'none';
                 camposRecorrente.style.display = 'block';
                 hiddenRecorrente.value = '1';
+
+                // Habilitar validação nos campos recorrentes
+                dataVencimentoNormal.required = false;
+                dataVencimentoPrimeira.required = true;
+                diaVencimentoRecorrente.required = true;
 
                 // Preencher automaticamente o dia do vencimento se houver uma data
                 preencherDiaVencimento();
@@ -439,6 +454,11 @@ $contas = $stmt->fetchAll();
             document.getElementById('recorrente').value = '0';
             document.getElementById('campos_conta_normal').style.display = 'block';
             document.getElementById('campos_conta_recorrente').style.display = 'none';
+
+            // Configurar campos required
+            document.getElementById('data_vencimento').required = true;
+            document.getElementById('data_vencimento_primeira').required = false;
+            document.getElementById('dia_vencimento_recorrente').required = false;
 
             document.getElementById('modalConta').style.display = 'flex';
         }
