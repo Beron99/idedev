@@ -35,13 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $dia_vencimento_recorrente = $recorrente ? intval($_POST['dia_vencimento_recorrente']) : null;
                 $data_fim_recorrencia = !empty($_POST['data_fim_recorrencia']) ? $_POST['data_fim_recorrencia'] : null;
 
+                // Definir status baseado no tipo de conta
+                $status = $recorrente ? 'recorrente' : 'pendente';
+
                 // Validar valor positivo
                 if ($valor <= 0) {
                     throw new Exception('O valor deve ser maior que zero');
                 }
 
-            $stmt = $pdo->prepare("INSERT INTO contas_pagar (usuario_id, categoria_id, descricao, valor, data_vencimento, observacoes, recorrente, tipo_recorrencia, dia_vencimento_recorrente, data_fim_recorrencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$usuario_id, $categoria_id, $descricao, $valor, $data_vencimento, $observacoes, $recorrente, $tipo_recorrencia, $dia_vencimento_recorrente, $data_fim_recorrencia]);
+            $stmt = $pdo->prepare("INSERT INTO contas_pagar (usuario_id, categoria_id, descricao, valor, data_vencimento, observacoes, status, recorrente, tipo_recorrencia, dia_vencimento_recorrente, data_fim_recorrencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$usuario_id, $categoria_id, $descricao, $valor, $data_vencimento, $observacoes, $status, $recorrente, $tipo_recorrencia, $dia_vencimento_recorrente, $data_fim_recorrencia]);
 
                 logSeguranca('info', "Conta adicionada: $descricao (R$ $valor)", $usuario_id);
 
@@ -62,13 +65,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $dia_vencimento_recorrente = $recorrente ? intval($_POST['dia_vencimento_recorrente']) : null;
                 $data_fim_recorrencia = !empty($_POST['data_fim_recorrencia']) ? $_POST['data_fim_recorrencia'] : null;
 
+                // Buscar conta atual para verificar se é gerada automaticamente
+                $stmt_check = $pdo->prepare("SELECT gerada_automaticamente, status FROM contas_pagar WHERE id = ? AND usuario_id = ?");
+                $stmt_check->execute([$id, $usuario_id]);
+                $conta_atual = $stmt_check->fetch();
+
+                // Definir status: se for conta gerada automaticamente, manter o status atual, senão usar lógica de recorrente
+                if ($conta_atual && $conta_atual['gerada_automaticamente']) {
+                    $status = $conta_atual['status']; // Manter status original (pendente, pago, vencido)
+                } else {
+                    $status = $recorrente ? 'recorrente' : 'pendente';
+                }
+
                 // Validar valor positivo
                 if ($valor <= 0) {
                     throw new Exception('O valor deve ser maior que zero');
                 }
 
-            $stmt = $pdo->prepare("UPDATE contas_pagar SET descricao = ?, valor = ?, data_vencimento = ?, categoria_id = ?, observacoes = ?, recorrente = ?, tipo_recorrencia = ?, dia_vencimento_recorrente = ?, data_fim_recorrencia = ? WHERE id = ? AND usuario_id = ?");
-            $stmt->execute([$descricao, $valor, $data_vencimento, $categoria_id, $observacoes, $recorrente, $tipo_recorrencia, $dia_vencimento_recorrente, $data_fim_recorrencia, $id, $usuario_id]);
+            $stmt = $pdo->prepare("UPDATE contas_pagar SET descricao = ?, valor = ?, data_vencimento = ?, categoria_id = ?, observacoes = ?, status = ?, recorrente = ?, tipo_recorrencia = ?, dia_vencimento_recorrente = ?, data_fim_recorrencia = ? WHERE id = ? AND usuario_id = ?");
+            $stmt->execute([$descricao, $valor, $data_vencimento, $categoria_id, $observacoes, $status, $recorrente, $tipo_recorrencia, $dia_vencimento_recorrente, $data_fim_recorrencia, $id, $usuario_id]);
 
                 logSeguranca('info', "Conta editada ID: $id", $usuario_id);
 

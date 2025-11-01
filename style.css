@@ -337,6 +337,10 @@ body {
     border-left-color: #FF6384;
 }
 
+.stat-card.recorrente {
+    border-left-color: #9b59b6;
+}
+
 .stat-icon {
     font-size: 40px;
     width: 60px;
@@ -616,6 +620,11 @@ body {
 
 .status-vencido {
     background: #FF6384;
+    color: white;
+}
+
+.status-recorrente {
+    background: #9b59b6;
     color: white;
 }
 

@@ -48,20 +48,25 @@ try {
     }
 
     // === CONTAS A PAGAR ===
-    // Pendentes
+    // Pendentes (excluindo recorrentes)
     $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_pagar WHERE usuario_id = ? AND status = 'pendente'");
     $stmt->execute([$usuario_id]);
     $pagar_pendentes = $stmt->fetch();
 
-    // Pagas este mês
+    // Pagas este mês (excluindo recorrentes)
     $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_pagar WHERE usuario_id = ? AND status = 'pago' AND MONTH(data_pagamento) = MONTH(CURRENT_DATE()) AND YEAR(data_pagamento) = YEAR(CURRENT_DATE())");
     $stmt->execute([$usuario_id]);
     $pagar_pagas_mes = $stmt->fetch();
 
-    // Vencidas
+    // Vencidas (excluindo recorrentes)
     $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_pagar WHERE usuario_id = ? AND status = 'vencido'");
     $stmt->execute([$usuario_id]);
     $pagar_vencidas = $stmt->fetch();
+
+    // Recorrentes
+    $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_pagar WHERE usuario_id = ? AND status = 'recorrente'");
+    $stmt->execute([$usuario_id]);
+    $pagar_recorrentes = $stmt->fetch();
 
     // === CONTAS A RECEBER (se existir a tabela) ===
     if ($tem_contas_receber) {
@@ -390,6 +395,15 @@ try {
                         <h3>Vencidas</h3>
                         <p class="stat-number"><?php echo $pagar_vencidas['total']; ?></p>
                         <p class="stat-value">R$ <?php echo number_format($pagar_vencidas['soma'], 2, ',', '.'); ?></p>
+                    </div>
+                </div>
+
+                <div class="stat-card" style="border-left-color: #9b59b6;">
+                    <div class="stat-icon">🔄</div>
+                    <div class="stat-info">
+                        <h3>Recorrentes</h3>
+                        <p class="stat-number"><?php echo $pagar_recorrentes['total']; ?></p>
+                        <p class="stat-value">R$ <?php echo number_format($pagar_recorrentes['soma'], 2, ',', '.'); ?>/mês</p>
                     </div>
                 </div>
             </div>
