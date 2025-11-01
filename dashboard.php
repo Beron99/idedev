@@ -441,87 +441,6 @@ try {
                 </div>
             <?php endif; ?>
 
-            <!-- Contas Recorrentes -->
-            <?php if ($recorrentes_ativas['total'] > 0): ?>
-                <h3 class="secao-titulo">🔄 Contas Recorrentes Ativas</h3>
-                <div class="stats-grid">
-                    <div class="stat-card" style="border-left-color: #9b59b6;">
-                        <div class="stat-icon">🔄</div>
-                        <div class="stat-info">
-                            <h3>Total Recorrentes</h3>
-                            <p class="stat-number"><?php echo $recorrentes_ativas['total']; ?></p>
-                            <p class="stat-value">R$ <?php echo number_format($recorrentes_ativas['soma'], 2, ',', '.'); ?>/mês</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card" style="border-left-color: #3498db;">
-                        <div class="stat-icon">📊</div>
-                        <div class="stat-info">
-                            <h3>Impacto Anual</h3>
-                            <p class="stat-number">12 meses</p>
-                            <p class="stat-value">R$ <?php echo number_format($recorrentes_ativas['soma'] * 12, 2, ',', '.'); ?></p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card" style="border-left-color: #16a085;">
-                        <div class="stat-icon">⚙️</div>
-                        <div class="stat-info">
-                            <h3>Gerenciar Contas</h3>
-                            <p class="stat-number" style="visibility: hidden;">0</p>
-                            <a href="gerenciar_recorrentes.php" class="btn btn-primary" style="text-decoration: none; margin-top: 5px;">Ver Todas</a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Lista de Contas Recorrentes -->
-                <?php if (count($lista_recorrentes) > 0): ?>
-                    <div class="proximas-grid" style="margin-top: 20px;">
-                        <?php foreach ($lista_recorrentes as $rec): ?>
-                            <div class="conta-card" style="border-left: 4px solid <?php echo $rec['categoria_cor'] ?? '#9b59b6'; ?>">
-                                <div class="conta-header">
-                                    <span class="badge-recorrente" style="background: #9b59b6; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: bold;">🔄 RECORRENTE</span>
-                                    <h4 style="margin: 8px 0 0 0; font-size: 18px; color: #333;"><?php echo htmlspecialchars($rec['descricao']); ?></h4>
-                                </div>
-                                <div style="margin-top: 15px;">
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                        <span style="font-size: 12px; color: #666;">Tipo:</span>
-                                        <strong style="font-size: 13px;">
-                                            <?php
-                                            $tipos = [
-                                                'mensal' => 'Mensal',
-                                                'bimestral' => 'Bimestral',
-                                                'trimestral' => 'Trimestral',
-                                                'semestral' => 'Semestral',
-                                                'anual' => 'Anual'
-                                            ];
-                                            echo $tipos[$rec['tipo_recorrencia']] ?? 'Mensal';
-                                            ?>
-                                        </strong>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                        <span style="font-size: 12px; color: #666;">Vence dia:</span>
-                                        <strong style="font-size: 13px;"><?php echo $rec['dia_vencimento_recorrente']; ?></strong>
-                                    </div>
-                                    <?php if ($rec['categoria_nome']): ?>
-                                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                                            <span style="font-size: 12px; color: #666;">Categoria:</span>
-                                            <span style="background: <?php echo $rec['categoria_cor']; ?>; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: 600;">
-                                                <?php echo htmlspecialchars($rec['categoria_nome']); ?>
-                                            </span>
-                                        </div>
-                                    <?php endif; ?>
-                                    <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #eee; text-align: right;">
-                                        <span style="font-size: 20px; font-weight: bold; color: #e74c3c;">
-                                            R$ <?php echo number_format($rec['valor'], 2, ',', '.'); ?>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            <?php endif; ?>
-
             <!-- Gráficos -->
             <div class="charts-grid">
                 <div class="chart-box">
@@ -534,6 +453,88 @@ try {
                     <canvas id="chartCategorias"></canvas>
                 </div>
             </div>
+
+            <!-- Contas Recorrentes (Compacto) -->
+            <?php if ($recorrentes_ativas['total'] > 0): ?>
+                <h3 class="secao-titulo">🔄 Contas Recorrentes Ativas</h3>
+                <div class="proximas-grid">
+                    <?php
+                    // Buscar top 5 contas recorrentes
+                    $stmt = $pdo->prepare("
+                        SELECT id, descricao, valor, tipo_recorrencia, dia_vencimento_recorrente,
+                               data_fim_recorrencia
+                        FROM contas_pagar
+                        WHERE usuario_id = ?
+                          AND status = 'recorrente'
+                          AND (data_fim_recorrencia IS NULL OR data_fim_recorrencia >= CURRENT_DATE())
+                        ORDER BY valor DESC
+                        LIMIT 5
+                    ");
+                    $stmt->execute([$usuario_id]);
+                    $top_recorrentes = $stmt->fetchAll();
+                    ?>
+
+                    <div class="proximas-contas">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0; font-size: 16px; color: #333;">Maiores Contas Recorrentes</h4>
+                            <a href="gerenciar_recorrentes.php" class="btn btn-small" style="font-size: 12px; padding: 5px 12px; text-decoration: none;">Ver Todas</a>
+                        </div>
+                        <?php if (count($top_recorrentes) > 0): ?>
+                            <div class="contas-list">
+                                <?php foreach ($top_recorrentes as $conta): ?>
+                                    <div class="conta-item">
+                                        <div class="conta-info">
+                                            <div>
+                                                <strong><?php echo htmlspecialchars($conta['descricao']); ?></strong>
+                                                <small>
+                                                    <?php
+                                                    $tipos = [
+                                                        'mensal' => 'Mensal',
+                                                        'bimestral' => 'Bimestral',
+                                                        'trimestral' => 'Trimestral',
+                                                        'semestral' => 'Semestral',
+                                                        'anual' => 'Anual'
+                                                    ];
+                                                    echo $tipos[$conta['tipo_recorrencia']] ?? 'Mensal';
+                                                    echo ' - Dia ' . $conta['dia_vencimento_recorrente'];
+                                                    ?>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="conta-detalhes">
+                                            <span class="conta-valor" style="color: #9b59b6; font-weight: 700;">R$ <?php echo number_format($conta['valor'], 2, ',', '.'); ?></span>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="texto-vazio">Nenhuma conta recorrente ativa</p>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="proximas-contas">
+                        <h4 style="margin: 0 0 15px 0; font-size: 16px; color: #333;">Resumo Mensal</h4>
+                        <div style="background: linear-gradient(135deg, #ffffff 0%, #f4ecfc 100%); padding: 20px; border-radius: 8px; border: 2px solid #9b59b6;">
+                            <div style="text-align: center;">
+                                <p style="margin: 0 0 8px 0; font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Total Mensal</p>
+                                <p style="margin: 0; font-size: 28px; font-weight: 700; color: #9b59b6;">
+                                    R$ <?php echo number_format($recorrentes_ativas['soma'], 2, ',', '.'); ?>
+                                </p>
+                                <p style="margin: 8px 0 0 0; font-size: 11px; color: #999;">
+                                    <?php echo $recorrentes_ativas['total']; ?> conta<?php echo $recorrentes_ativas['total'] != 1 ? 's' : ''; ?> ativa<?php echo $recorrentes_ativas['total'] != 1 ? 's' : ''; ?>
+                                </p>
+                            </div>
+                            <hr style="margin: 15px 0; border: none; border-top: 1px solid #e0d4f0;">
+                            <div style="text-align: center;">
+                                <p style="margin: 0 0 5px 0; font-size: 11px; color: #666;">Impacto Anual Estimado</p>
+                                <p style="margin: 0; font-size: 18px; font-weight: 600; color: #8e44ad;">
+                                    R$ <?php echo number_format($recorrentes_ativas['soma'] * 12, 2, ',', '.'); ?>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <!-- Próximas Contas -->
             <div class="proximas-grid">
