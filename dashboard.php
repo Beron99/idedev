@@ -466,12 +466,12 @@ try {
                             <div class="conta-card" style="border-left: 4px solid <?php echo $rec['categoria_cor'] ?? '#9b59b6'; ?>">
                                 <div class="conta-header">
                                     <span class="badge-recorrente" style="background: #9b59b6; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: bold;">🔄 RECORRENTE</span>
-                                    <h4><?php echo htmlspecialchars($rec['descricao']); ?></h4>
+                                    <h4 style="margin: 8px 0 0 0; font-size: 18px; color: #333;"><?php echo htmlspecialchars($rec['descricao']); ?></h4>
                                 </div>
-                                <div class="conta-info">
-                                    <div>
+                                <div style="margin-top: 15px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                                         <span style="font-size: 12px; color: #666;">Tipo:</span>
-                                        <strong>
+                                        <strong style="font-size: 13px;">
                                             <?php
                                             $tipos = [
                                                 'mensal' => 'Mensal',
@@ -484,20 +484,20 @@ try {
                                             ?>
                                         </strong>
                                     </div>
-                                    <div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                                         <span style="font-size: 12px; color: #666;">Vence dia:</span>
-                                        <strong><?php echo $rec['dia_vencimento_recorrente']; ?></strong>
+                                        <strong style="font-size: 13px;"><?php echo $rec['dia_vencimento_recorrente']; ?></strong>
                                     </div>
                                     <?php if ($rec['categoria_nome']): ?>
-                                        <div>
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
                                             <span style="font-size: 12px; color: #666;">Categoria:</span>
-                                            <span style="background: <?php echo $rec['categoria_cor']; ?>; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">
+                                            <span style="background: <?php echo $rec['categoria_cor']; ?>; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: 600;">
                                                 <?php echo htmlspecialchars($rec['categoria_nome']); ?>
                                             </span>
                                         </div>
                                     <?php endif; ?>
-                                    <div style="margin-top: 10px;">
-                                        <span style="font-size: 18px; font-weight: bold; color: #e74c3c;">
+                                    <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #eee; text-align: right;">
+                                        <span style="font-size: 20px; font-weight: bold; color: #e74c3c;">
                                             R$ <?php echo number_format($rec['valor'], 2, ',', '.'); ?>
                                         </span>
                                     </div>
