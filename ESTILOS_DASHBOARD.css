@@ -117,15 +117,15 @@
 
 /* === CARDS DE ESTATÍSTICAS - CONTAS A RECEBER === */
 .stat-card.receber-pendente {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-left-color: #667eea;
 }
 
 .stat-card.receber-recebido {
-    background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+    border-left-color: #2ecc71;
 }
 
 .stat-card.receber-vencido {
-    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    border-left-color: #f39c12;
 }
 
 /* === GRID DE PRÓXIMAS CONTAS === */
