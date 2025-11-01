@@ -444,16 +444,17 @@ try {
                         <div class="stat-icon">📊</div>
                         <div class="stat-info">
                             <h3>Impacto Anual</h3>
+                            <p class="stat-number">12 meses</p>
                             <p class="stat-value">R$ <?php echo number_format($recorrentes_ativas['soma'] * 12, 2, ',', '.'); ?></p>
-                            <small style="color: #666;">Projeção de 12 meses</small>
                         </div>
                     </div>
 
-                    <div class="stat-card" style="border-left-color: #e74c3c;">
+                    <div class="stat-card" style="border-left-color: #16a085;">
                         <div class="stat-icon">⚙️</div>
                         <div class="stat-info">
-                            <h3>Gerenciar</h3>
-                            <a href="gerenciar_recorrentes.php" class="btn btn-primary" style="margin-top: 10px; display: inline-block; padding: 8px 16px; text-decoration: none;">Ver Detalhes</a>
+                            <h3>Gerenciar Contas</h3>
+                            <p class="stat-number" style="visibility: hidden;">0</p>
+                            <a href="gerenciar_recorrentes.php" class="btn btn-primary" style="text-decoration: none; margin-top: 5px;">Ver Todas</a>
                         </div>
                     </div>
                 </div>
