@@ -414,6 +414,30 @@ $contas = $stmt->fetchAll();
         </div>
     </div>
 
+    <!-- Modal Marcar como Pago -->
+    <div id="modalPago" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="modal-close" onclick="fecharModalPago()">&times;</span>
+            <h2>Marcar como Pago</h2>
+            <form method="POST" action="" id="formPago">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                <input type="hidden" name="acao" value="pagar">
+                <input type="hidden" name="id" id="formPagoId">
+
+                <div class="form-group">
+                    <label for="data_pagamento">Data do Pagamento *</label>
+                    <input type="date" id="data_pagamento" name="data_pagamento" value="<?php echo date('Y-m-d'); ?>" required>
+                    <small style="color: #999;">Por padrão é hoje (<?php echo date('d/m/Y'); ?>)</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="fecharModalPago()" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Confirmar Pagamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function alternarTipoConta() {
             const tipoSelecionado = document.querySelector('input[name="tipo_conta"]:checked').value;
@@ -534,26 +558,25 @@ $contas = $stmt->fetchAll();
         }
 
         function marcarPago(id) {
-            const dataPagamento = prompt('Data do pagamento (deixe em branco para hoje):');
-            if (dataPagamento !== null) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = `
-                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
-                    <input type="hidden" name="acao" value="pagar">
-                    <input type="hidden" name="id" value="${id}">
-                    <input type="hidden" name="data_pagamento" value="${dataPagamento || '<?php echo date('Y-m-d'); ?>'}">
-                `;
-                document.body.appendChild(form);
-                form.submit();
-            }
+            document.getElementById('formPagoId').value = id;
+            document.getElementById('data_pagamento').value = '<?php echo date('Y-m-d'); ?>';
+            document.getElementById('modalPago').style.display = 'flex';
+        }
+
+        function fecharModalPago() {
+            document.getElementById('modalPago').style.display = 'none';
         }
 
         // Fechar modal ao clicar fora
         window.onclick = function(event) {
-            const modal = document.getElementById('modalConta');
-            if (event.target == modal) {
+            const modalConta = document.getElementById('modalConta');
+            const modalPago = document.getElementById('modalPago');
+
+            if (event.target == modalConta) {
                 fecharModal();
+            }
+            if (event.target == modalPago) {
+                fecharModalPago();
             }
         }
 

@@ -371,6 +371,30 @@ $pdo->prepare("UPDATE contas_receber SET status = 'vencido' WHERE status = 'pend
         </div>
     </div>
 
+    <!-- Modal Marcar como Recebido -->
+    <div id="modalRecebido" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="modal-close" onclick="fecharModalRecebido()">&times;</span>
+            <h2>Marcar como Recebido</h2>
+            <form method="POST" action="" id="formRecebido">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                <input type="hidden" name="acao" value="receber">
+                <input type="hidden" name="id" id="formRecebidoId">
+
+                <div class="form-group">
+                    <label for="data_recebimento">Data do Recebimento *</label>
+                    <input type="date" id="data_recebimento" name="data_recebimento" value="<?php echo date('Y-m-d'); ?>" required>
+                    <small style="color: #999;">Por padrão é hoje (<?php echo date('d/m/Y'); ?>)</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="fecharModalRecebido()" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Confirmar Recebimento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function abrirModal() {
             document.getElementById('modalTitulo').textContent = 'Nova Conta a Receber';
@@ -422,26 +446,25 @@ $pdo->prepare("UPDATE contas_receber SET status = 'vencido' WHERE status = 'pend
         }
 
         function marcarRecebido(id) {
-            const dataRecebimento = prompt('Data do recebimento (deixe em branco para hoje):');
-            if (dataRecebimento !== null) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = `
-                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
-                    <input type="hidden" name="acao" value="receber">
-                    <input type="hidden" name="id" value="${id}">
-                    <input type="hidden" name="data_recebimento" value="${dataRecebimento || '<?php echo date('Y-m-d'); ?>'}">
-                `;
-                document.body.appendChild(form);
-                form.submit();
-            }
+            document.getElementById('formRecebidoId').value = id;
+            document.getElementById('data_recebimento').value = '<?php echo date('Y-m-d'); ?>';
+            document.getElementById('modalRecebido').style.display = 'flex';
+        }
+
+        function fecharModalRecebido() {
+            document.getElementById('modalRecebido').style.display = 'none';
         }
 
         // Fechar modal ao clicar fora
         window.onclick = function(event) {
-            const modal = document.getElementById('modalConta');
-            if (event.target == modal) {
+            const modalConta = document.getElementById('modalConta');
+            const modalRecebido = document.getElementById('modalRecebido');
+
+            if (event.target == modalConta) {
                 fecharModal();
+            }
+            if (event.target == modalRecebido) {
+                fecharModalRecebido();
             }
         }
 
