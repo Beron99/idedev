@@ -36,27 +36,63 @@ try {
 
 // Buscar estatísticas gerais
 try {
-    // Total de contas pendentes
-    $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_pagar WHERE usuario_id = ? AND status = 'pendente'");
-    $stmt->execute([$usuario_id]);
-    $pendentes = $stmt->fetch();
-
-    // Total de contas pagas no mês atual
-    $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_pagar WHERE usuario_id = ? AND status = 'pago' AND MONTH(data_pagamento) = MONTH(CURRENT_DATE()) AND YEAR(data_pagamento) = YEAR(CURRENT_DATE())");
-    $stmt->execute([$usuario_id]);
-    $pagas_mes = $stmt->fetch();
-
-    // Total de contas vencidas
-    $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_pagar WHERE usuario_id = ? AND status = 'pendente' AND data_vencimento < CURRENT_DATE()");
-    $stmt->execute([$usuario_id]);
-    $vencidas = $stmt->fetch();
-
-    // Atualizar status de contas vencidas
+    // Atualizar status de contas vencidas (pagar e receber)
     $pdo->prepare("UPDATE contas_pagar SET status = 'vencido' WHERE status = 'pendente' AND data_vencimento < CURRENT_DATE()")->execute();
 
-    // Próximas contas a vencer (próximos 7 dias)
+    // Verificar se a tabela contas_receber existe
+    $stmt = $pdo->query("SHOW TABLES LIKE 'contas_receber'");
+    $tem_contas_receber = $stmt->rowCount() > 0;
+
+    if ($tem_contas_receber) {
+        $pdo->prepare("UPDATE contas_receber SET status = 'vencido' WHERE status = 'pendente' AND data_vencimento < CURRENT_DATE()")->execute();
+    }
+
+    // === CONTAS A PAGAR ===
+    // Pendentes
+    $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_pagar WHERE usuario_id = ? AND status = 'pendente'");
+    $stmt->execute([$usuario_id]);
+    $pagar_pendentes = $stmt->fetch();
+
+    // Pagas este mês
+    $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_pagar WHERE usuario_id = ? AND status = 'pago' AND MONTH(data_pagamento) = MONTH(CURRENT_DATE()) AND YEAR(data_pagamento) = YEAR(CURRENT_DATE())");
+    $stmt->execute([$usuario_id]);
+    $pagar_pagas_mes = $stmt->fetch();
+
+    // Vencidas
+    $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_pagar WHERE usuario_id = ? AND status = 'vencido'");
+    $stmt->execute([$usuario_id]);
+    $pagar_vencidas = $stmt->fetch();
+
+    // === CONTAS A RECEBER (se existir a tabela) ===
+    if ($tem_contas_receber) {
+        // Pendentes
+        $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_receber WHERE usuario_id = ? AND status = 'pendente'");
+        $stmt->execute([$usuario_id]);
+        $receber_pendentes = $stmt->fetch();
+
+        // Recebidas este mês
+        $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_receber WHERE usuario_id = ? AND status = 'recebido' AND MONTH(data_recebimento) = MONTH(CURRENT_DATE()) AND YEAR(data_recebimento) = YEAR(CURRENT_DATE())");
+        $stmt->execute([$usuario_id]);
+        $receber_recebidas_mes = $stmt->fetch();
+
+        // Vencidas
+        $stmt = $pdo->prepare("SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma FROM contas_receber WHERE usuario_id = ? AND status = 'vencido'");
+        $stmt->execute([$usuario_id]);
+        $receber_vencidas = $stmt->fetch();
+    } else {
+        // Valores padrão se não existir a tabela
+        $receber_pendentes = ['total' => 0, 'soma' => 0];
+        $receber_recebidas_mes = ['total' => 0, 'soma' => 0];
+        $receber_vencidas = ['total' => 0, 'soma' => 0];
+    }
+
+    // === FLUXO DE CAIXA (Resumo) ===
+    $saldo_previsto = $receber_pendentes['soma'] - $pagar_pendentes['soma'];
+    $saldo_mes = $receber_recebidas_mes['soma'] - $pagar_pagas_mes['soma'];
+
+    // === PRÓXIMAS CONTAS A PAGAR (próximos 7 dias) ===
     $stmt = $pdo->prepare("
-        SELECT c.*, cat.nome as categoria_nome, cat.cor as categoria_cor
+        SELECT 'pagar' as tipo, c.*, cat.nome as categoria_nome, cat.cor as categoria_cor
         FROM contas_pagar c
         LEFT JOIN categorias cat ON c.categoria_id = cat.id
         WHERE c.usuario_id = ? AND c.status = 'pendente'
@@ -65,9 +101,49 @@ try {
         LIMIT 5
     ");
     $stmt->execute([$usuario_id]);
-    $proximas = $stmt->fetchAll();
+    $proximas_pagar = $stmt->fetchAll();
 
-    // Gastos por categoria (últimos 30 dias)
+    // === PRÓXIMAS CONTAS A RECEBER (próximos 7 dias) ===
+    if ($tem_contas_receber) {
+        $stmt = $pdo->prepare("
+            SELECT 'receber' as tipo, c.*, cat.nome as categoria_nome, cat.cor as categoria_cor
+            FROM contas_receber c
+            LEFT JOIN categorias cat ON c.categoria_id = cat.id
+            WHERE c.usuario_id = ? AND c.status = 'pendente'
+            AND c.data_vencimento BETWEEN CURRENT_DATE() AND DATE_ADD(CURRENT_DATE(), INTERVAL 7 DAY)
+            ORDER BY c.data_vencimento ASC
+            LIMIT 5
+        ");
+        $stmt->execute([$usuario_id]);
+        $proximas_receber = $stmt->fetchAll();
+    } else {
+        $proximas_receber = [];
+    }
+
+    // === GASTOS vs RECEITAS (últimos 30 dias) ===
+    $stmt = $pdo->prepare("
+        SELECT COALESCE(SUM(valor), 0) as total
+        FROM contas_pagar
+        WHERE usuario_id = ? AND status = 'pago'
+        AND data_pagamento >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+    ");
+    $stmt->execute([$usuario_id]);
+    $gastos_30dias = $stmt->fetchColumn();
+
+    if ($tem_contas_receber) {
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(valor), 0) as total
+            FROM contas_receber
+            WHERE usuario_id = ? AND status = 'recebido'
+            AND data_recebimento >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+        ");
+        $stmt->execute([$usuario_id]);
+        $receitas_30dias = $stmt->fetchColumn();
+    } else {
+        $receitas_30dias = 0;
+    }
+
+    // === GASTOS POR CATEGORIA (últimos 30 dias) ===
     $stmt = $pdo->prepare("
         SELECT cat.nome, cat.cor, COALESCE(SUM(c.valor), 0) as total
         FROM categorias cat
@@ -79,11 +155,12 @@ try {
         GROUP BY cat.id, cat.nome, cat.cor
         HAVING total > 0
         ORDER BY total DESC
+        LIMIT 8
     ");
     $stmt->execute([$usuario_id, $usuario_id]);
     $gastos_categoria = $stmt->fetchAll();
 
-    // Evolução mensal (últimos 6 meses)
+    // === EVOLUÇÃO MENSAL - Receitas vs Despesas (últimos 6 meses) ===
     $stmt = $pdo->prepare("
         SELECT
             DATE_FORMAT(data_pagamento, '%Y-%m') as mes,
@@ -95,7 +172,105 @@ try {
         ORDER BY mes ASC
     ");
     $stmt->execute([$usuario_id]);
-    $evolucao = $stmt->fetchAll();
+    $evolucao_despesas = $stmt->fetchAll();
+
+    if ($tem_contas_receber) {
+        $stmt = $pdo->prepare("
+            SELECT
+                DATE_FORMAT(data_recebimento, '%Y-%m') as mes,
+                SUM(valor) as total
+            FROM contas_receber
+            WHERE usuario_id = ? AND status = 'recebido'
+            AND data_recebimento >= DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH)
+            GROUP BY DATE_FORMAT(data_recebimento, '%Y-%m')
+            ORDER BY mes ASC
+        ");
+        $stmt->execute([$usuario_id]);
+        $evolucao_receitas = $stmt->fetchAll();
+    } else {
+        $evolucao_receitas = [];
+    }
+
+    // Criar array combinado de meses
+    $meses = [];
+    foreach ($evolucao_despesas as $item) {
+        if (!in_array($item['mes'], $meses)) $meses[] = $item['mes'];
+    }
+    foreach ($evolucao_receitas as $item) {
+        if (!in_array($item['mes'], $meses)) $meses[] = $item['mes'];
+    }
+    sort($meses);
+
+    // Organizar dados por mês
+    $dados_despesas = [];
+    $dados_receitas = [];
+    foreach ($meses as $mes) {
+        $desp = array_filter($evolucao_despesas, function($item) use ($mes) { return $item['mes'] == $mes; });
+        $rec = array_filter($evolucao_receitas, function($item) use ($mes) { return $item['mes'] == $mes; });
+
+        $dados_despesas[] = $desp ? array_values($desp)[0]['total'] : 0;
+        $dados_receitas[] = $rec ? array_values($rec)[0]['total'] : 0;
+    }
+
+    // === SUGESTÕES E ALERTAS ===
+    $sugestoes = [];
+    $alertas = [];
+
+    // Alerta: Contas vencidas
+    if ($pagar_vencidas['total'] > 0) {
+        $alertas[] = [
+            'tipo' => 'erro',
+            'icone' => '⚠️',
+            'titulo' => 'Contas Vencidas!',
+            'mensagem' => "Você tem {$pagar_vencidas['total']} conta(s) a pagar vencida(s) no valor de R$ " . number_format($pagar_vencidas['soma'], 2, ',', '.')
+        ];
+    }
+
+    if ($tem_contas_receber && $receber_vencidas['total'] > 0) {
+        $alertas[] = [
+            'tipo' => 'aviso',
+            'icone' => '💰',
+            'titulo' => 'Recebimentos Atrasados',
+            'mensagem' => "Você tem {$receber_vencidas['total']} conta(s) a receber vencida(s) no valor de R$ " . number_format($receber_vencidas['soma'], 2, ',', '.')
+        ];
+    }
+
+    // Sugestão: Gastos acima da média
+    if ($gastos_30dias > $receitas_30dias && $receitas_30dias > 0) {
+        $diferenca = $gastos_30dias - $receitas_30dias;
+        $sugestoes[] = [
+            'icone' => '📊',
+            'titulo' => 'Atenção aos Gastos',
+            'mensagem' => "Seus gastos estão R$ " . number_format($diferenca, 2, ',', '.') . " acima das receitas nos últimos 30 dias. Considere revisar suas despesas."
+        ];
+    }
+
+    // Sugestão: Saldo positivo
+    if ($saldo_mes > 0) {
+        $sugestoes[] = [
+            'icone' => '✅',
+            'titulo' => 'Parabéns!',
+            'mensagem' => "Você teve um saldo positivo de R$ " . number_format($saldo_mes, 2, ',', '.') . " neste mês. Continue assim!"
+        ];
+    }
+
+    // Sugestão: Muitas contas pendentes
+    if ($pagar_pendentes['total'] > 10) {
+        $sugestoes[] = [
+            'icone' => '📝',
+            'titulo' => 'Organize suas Contas',
+            'mensagem' => "Você tem {$pagar_pendentes['total']} contas pendentes. Considere organizá-las por prioridade."
+        ];
+    }
+
+    // Sugestão: Sem categorias
+    if (count($gastos_categoria) == 0) {
+        $sugestoes[] = [
+            'icone' => '🏷️',
+            'titulo' => 'Use Categorias',
+            'mensagem' => "Categorize suas despesas para ter um melhor controle financeiro e visualização nos gráficos."
+        ];
+    }
 
 } catch(PDOException $e) {
     $erro = 'Erro ao buscar dados: ' . $e->getMessage();
@@ -133,14 +308,44 @@ try {
                 <div class="mensagem erro"><?php echo $erro; ?></div>
             <?php endif; ?>
 
-            <!-- Cards de estatísticas -->
+            <!-- Alertas -->
+            <?php if (count($alertas) > 0): ?>
+                <div class="alertas-container">
+                    <?php foreach ($alertas as $alerta): ?>
+                        <div class="alerta alerta-<?php echo $alerta['tipo']; ?>">
+                            <span class="alerta-icone"><?php echo $alerta['icone']; ?></span>
+                            <div class="alerta-conteudo">
+                                <strong><?php echo $alerta['titulo']; ?></strong>
+                                <p><?php echo $alerta['mensagem']; ?></p>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Resumo Financeiro -->
+            <div class="resumo-financeiro">
+                <div class="resumo-card saldo-mes <?php echo $saldo_mes >= 0 ? 'positivo' : 'negativo'; ?>">
+                    <h4>Saldo do Mês</h4>
+                    <p class="resumo-valor">R$ <?php echo number_format(abs($saldo_mes), 2, ',', '.'); ?></p>
+                    <small><?php echo $saldo_mes >= 0 ? 'Positivo' : 'Negativo'; ?></small>
+                </div>
+                <div class="resumo-card saldo-previsto <?php echo $saldo_previsto >= 0 ? 'positivo' : 'negativo'; ?>">
+                    <h4>Saldo Previsto</h4>
+                    <p class="resumo-valor">R$ <?php echo number_format(abs($saldo_previsto), 2, ',', '.'); ?></p>
+                    <small>Pendentes</small>
+                </div>
+            </div>
+
+            <!-- Cards de estatísticas - CONTAS A PAGAR -->
+            <h3 class="secao-titulo">Contas a Pagar</h3>
             <div class="stats-grid">
                 <div class="stat-card pendente">
                     <div class="stat-icon">⏳</div>
                     <div class="stat-info">
-                        <h3>Contas Pendentes</h3>
-                        <p class="stat-number"><?php echo $pendentes['total']; ?></p>
-                        <p class="stat-value">R$ <?php echo number_format($pendentes['soma'], 2, ',', '.'); ?></p>
+                        <h3>Pendentes</h3>
+                        <p class="stat-number"><?php echo $pagar_pendentes['total']; ?></p>
+                        <p class="stat-value">R$ <?php echo number_format($pagar_pendentes['soma'], 2, ',', '.'); ?></p>
                     </div>
                 </div>
 
@@ -148,63 +353,205 @@ try {
                     <div class="stat-icon">✓</div>
                     <div class="stat-info">
                         <h3>Pagas este Mês</h3>
-                        <p class="stat-number"><?php echo $pagas_mes['total']; ?></p>
-                        <p class="stat-value">R$ <?php echo number_format($pagas_mes['soma'], 2, ',', '.'); ?></p>
+                        <p class="stat-number"><?php echo $pagar_pagas_mes['total']; ?></p>
+                        <p class="stat-value">R$ <?php echo number_format($pagar_pagas_mes['soma'], 2, ',', '.'); ?></p>
                     </div>
                 </div>
 
                 <div class="stat-card vencido">
                     <div class="stat-icon">⚠</div>
                     <div class="stat-info">
-                        <h3>Contas Vencidas</h3>
-                        <p class="stat-number"><?php echo $vencidas['total']; ?></p>
-                        <p class="stat-value">R$ <?php echo number_format($vencidas['soma'], 2, ',', '.'); ?></p>
+                        <h3>Vencidas</h3>
+                        <p class="stat-number"><?php echo $pagar_vencidas['total']; ?></p>
+                        <p class="stat-value">R$ <?php echo number_format($pagar_vencidas['soma'], 2, ',', '.'); ?></p>
                     </div>
                 </div>
             </div>
+
+            <!-- Cards de estatísticas - CONTAS A RECEBER -->
+            <?php if ($tem_contas_receber): ?>
+                <h3 class="secao-titulo">Contas a Receber</h3>
+                <div class="stats-grid">
+                    <div class="stat-card receber-pendente">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-info">
+                            <h3>Pendentes</h3>
+                            <p class="stat-number"><?php echo $receber_pendentes['total']; ?></p>
+                            <p class="stat-value">R$ <?php echo number_format($receber_pendentes['soma'], 2, ',', '.'); ?></p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card receber-recebido">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-info">
+                            <h3>Recebidas este Mês</h3>
+                            <p class="stat-number"><?php echo $receber_recebidas_mes['total']; ?></p>
+                            <p class="stat-value">R$ <?php echo number_format($receber_recebidas_mes['soma'], 2, ',', '.'); ?></p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card receber-vencido">
+                        <div class="stat-icon">⏰</div>
+                        <div class="stat-info">
+                            <h3>Vencidas</h3>
+                            <p class="stat-number"><?php echo $receber_vencidas['total']; ?></p>
+                            <p class="stat-value">R$ <?php echo number_format($receber_vencidas['soma'], 2, ',', '.'); ?></p>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <!-- Gráficos -->
             <div class="charts-grid">
                 <div class="chart-box">
-                    <h3>Gastos por Categoria (30 dias)</h3>
-                    <canvas id="chartCategorias"></canvas>
+                    <h3>Receitas vs Despesas (6 meses)</h3>
+                    <canvas id="chartEvolucao"></canvas>
                 </div>
 
                 <div class="chart-box">
-                    <h3>Evolução Mensal</h3>
-                    <canvas id="chartEvolucao"></canvas>
+                    <h3>Gastos por Categoria (30 dias)</h3>
+                    <canvas id="chartCategorias"></canvas>
                 </div>
             </div>
 
-            <!-- Próximas contas a vencer -->
-            <div class="proximas-contas">
-                <h3>Próximas Contas (7 dias)</h3>
-                <?php if (count($proximas) > 0): ?>
-                    <div class="contas-list">
-                        <?php foreach ($proximas as $conta): ?>
-                            <div class="conta-item">
-                                <div class="conta-info">
-                                    <span class="conta-categoria" style="background-color: <?php echo $conta['categoria_cor'] ?? '#ccc'; ?>"></span>
-                                    <div>
-                                        <strong><?php echo htmlspecialchars($conta['descricao']); ?></strong>
-                                        <small><?php echo $conta['categoria_nome'] ?? 'Sem categoria'; ?></small>
+            <!-- Próximas Contas -->
+            <div class="proximas-grid">
+                <!-- Contas a PAGAR -->
+                <div class="proximas-contas">
+                    <h3>📤 Próximas a Pagar (7 dias)</h3>
+                    <?php if (count($proximas_pagar) > 0): ?>
+                        <div class="contas-list">
+                            <?php foreach ($proximas_pagar as $conta): ?>
+                                <div class="conta-item pagar">
+                                    <div class="conta-info">
+                                        <span class="conta-categoria" style="background-color: <?php echo $conta['categoria_cor'] ?? '#ccc'; ?>"></span>
+                                        <div>
+                                            <strong><?php echo htmlspecialchars($conta['descricao']); ?></strong>
+                                            <small><?php echo $conta['categoria_nome'] ?? 'Sem categoria'; ?></small>
+                                        </div>
+                                    </div>
+                                    <div class="conta-detalhes">
+                                        <span class="conta-valor pagar">R$ <?php echo number_format($conta['valor'], 2, ',', '.'); ?></span>
+                                        <span class="conta-vencimento"><?php echo date('d/m/Y', strtotime($conta['data_vencimento'])); ?></span>
                                     </div>
                                 </div>
-                                <div class="conta-detalhes">
-                                    <span class="conta-valor">R$ <?php echo number_format($conta['valor'], 2, ',', '.'); ?></span>
-                                    <span class="conta-vencimento"><?php echo date('d/m/Y', strtotime($conta['data_vencimento'])); ?></span>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <p class="texto-vazio">Nenhuma conta a pagar nos próximos 7 dias</p>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Contas a RECEBER -->
+                <?php if ($tem_contas_receber): ?>
+                    <div class="proximas-contas">
+                        <h3>📥 Próximas a Receber (7 dias)</h3>
+                        <?php if (count($proximas_receber) > 0): ?>
+                            <div class="contas-list">
+                                <?php foreach ($proximas_receber as $conta): ?>
+                                    <div class="conta-item receber">
+                                        <div class="conta-info">
+                                            <span class="conta-categoria" style="background-color: <?php echo $conta['categoria_cor'] ?? '#ccc'; ?>"></span>
+                                            <div>
+                                                <strong><?php echo htmlspecialchars($conta['descricao']); ?></strong>
+                                                <small><?php echo $conta['cliente'] ?? 'Cliente não informado'; ?></small>
+                                            </div>
+                                        </div>
+                                        <div class="conta-detalhes">
+                                            <span class="conta-valor receber">R$ <?php echo number_format($conta['valor'], 2, ',', '.'); ?></span>
+                                            <span class="conta-vencimento"><?php echo date('d/m/Y', strtotime($conta['data_vencimento'])); ?></span>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="texto-vazio">Nenhuma conta a receber nos próximos 7 dias</p>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Sugestões -->
+            <?php if (count($sugestoes) > 0): ?>
+                <div class="sugestoes-container">
+                    <h3>💡 Sugestões</h3>
+                    <div class="sugestoes-grid">
+                        <?php foreach ($sugestoes as $sugestao): ?>
+                            <div class="sugestao-card">
+                                <span class="sugestao-icone"><?php echo $sugestao['icone']; ?></span>
+                                <div class="sugestao-conteudo">
+                                    <h4><?php echo $sugestao['titulo']; ?></h4>
+                                    <p><?php echo $sugestao['mensagem']; ?></p>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
-                <?php else: ?>
-                    <p class="texto-vazio">Nenhuma conta a vencer nos próximos 7 dias!</p>
-                <?php endif; ?>
-            </div>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
     <script>
+        // Gráfico de Linha - Receitas vs Despesas
+        const ctxEvolucao = document.getElementById('chartEvolucao');
+        new Chart(ctxEvolucao, {
+            type: 'line',
+            data: {
+                labels: <?php echo json_encode(array_map(function($mes) {
+                    $date = DateTime::createFromFormat('Y-m', $mes);
+                    return $date->format('M/y');
+                }, $meses)); ?>,
+                datasets: [
+                    {
+                        label: 'Receitas',
+                        data: <?php echo json_encode($dados_receitas); ?>,
+                        borderColor: '#2ecc71',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Despesas',
+                        data: <?php echo json_encode($dados_despesas); ?>,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': R$ ' + context.parsed.y.toFixed(2).replace('.', ',');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'R$ ' + value.toFixed(0);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
         // Gráfico de Pizza - Gastos por Categoria
         const ctxCategorias = document.getElementById('chartCategorias');
         new Chart(ctxCategorias, {
@@ -228,53 +575,9 @@ try {
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                return context.label + ': R$ ' + context.parsed.toFixed(2).replace('.', ',');
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        // Gráfico de Linha - Evolução Mensal
-        const ctxEvolucao = document.getElementById('chartEvolucao');
-        new Chart(ctxEvolucao, {
-            type: 'line',
-            data: {
-                labels: <?php echo json_encode(array_map(function($item) {
-                    $date = DateTime::createFromFormat('Y-m', $item['mes']);
-                    return $date->format('M/y');
-                }, $evolucao)); ?>,
-                datasets: [{
-                    label: 'Gastos (R$)',
-                    data: <?php echo json_encode(array_column($evolucao, 'total')); ?>,
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return 'R$ ' + context.parsed.y.toFixed(2).replace('.', ',');
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return 'R$ ' + value.toFixed(0);
+                                let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                let percent = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': R$ ' + context.parsed.toFixed(2).replace('.', ',') + ' (' + percent + '%)';
                             }
                         }
                     }

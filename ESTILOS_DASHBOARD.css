@@ -1,0 +1,245 @@
+/* ===================================================
+   ESTILOS ADICIONAIS PARA O DASHBOARD COMPLETO
+   Adicione estes estilos ao final do arquivo style.css
+   =================================================== */
+
+/* === ALERTAS === */
+.alertas-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.alerta {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    border-left: 4px solid;
+    animation: slideInLeft 0.3s ease;
+}
+
+.alerta-erro {
+    background-color: #fee;
+    border-left-color: #e74c3c;
+    color: #721c24;
+}
+
+.alerta-aviso {
+    background-color: #fff3cd;
+    border-left-color: #f39c12;
+    color: #856404;
+}
+
+.alerta-icone {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.alerta-conteudo strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 16px;
+}
+
+.alerta-conteudo p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* === RESUMO FINANCEIRO === */
+.resumo-financeiro {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.resumo-card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    border: 3px solid;
+}
+
+.resumo-card.positivo {
+    border-color: #2ecc71;
+    background: linear-gradient(135deg, #ffffff 0%, #e8f8f0 100%);
+}
+
+.resumo-card.negativo {
+    border-color: #e74c3c;
+    background: linear-gradient(135deg, #ffffff 0%, #fde8e8 100%);
+}
+
+.resumo-card h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #666;
+}
+
+.resumo-card .resumo-valor {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 10px 0;
+}
+
+.resumo-card.positivo .resumo-valor {
+    color: #27ae60;
+}
+
+.resumo-card.negativo .resumo-valor {
+    color: #c0392b;
+}
+
+.resumo-card small {
+    display: block;
+    font-size: 12px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* === SEÇÃO TÍTULO === */
+.secao-titulo {
+    margin: 30px 0 15px 0;
+    font-size: 18px;
+    color: #333;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+/* === CARDS DE ESTATÍSTICAS - CONTAS A RECEBER === */
+.stat-card.receber-pendente {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-card.receber-recebido {
+    background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+}
+
+.stat-card.receber-vencido {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+}
+
+/* === GRID DE PRÓXIMAS CONTAS === */
+.proximas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.conta-item.pagar .conta-categoria {
+    border-left: 3px solid #e74c3c;
+}
+
+.conta-item.receber .conta-categoria {
+    border-left: 3px solid #2ecc71;
+}
+
+.conta-valor.pagar {
+    color: #e74c3c;
+    font-weight: 700;
+}
+
+.conta-valor.receber {
+    color: #2ecc71;
+    font-weight: 700;
+}
+
+/* === SUGESTÕES === */
+.sugestoes-container {
+    margin: 30px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.sugestoes-container h3 {
+    margin: 0 0 20px 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.sugestoes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.sugestao-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.sugestao-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.sugestao-icone {
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.sugestao-conteudo h4 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.sugestao-conteudo p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* === ANIMAÇÕES === */
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* === RESPONSIVIDADE === */
+@media (max-width: 768px) {
+    .resumo-financeiro {
+        grid-template-columns: 1fr;
+    }
+
+    .proximas-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sugestoes-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .resumo-card .resumo-valor {
+        font-size: 24px;
+    }
+
+    .alerta {
+        flex-direction: column;
+        text-align: center;
+    }
+}
