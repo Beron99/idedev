@@ -1,21 +1,19 @@
 -- =====================================================
--- BANCO DE DADOS SIMPLIFICADO
--- Sistema de Gestão de Contas a Pagar - Versão Essencial
+-- INSTALAÇÃO DO ZERO - Sistema de Contas a Pagar
 -- =====================================================
+-- Execute este arquivo em um banco de dados VAZIO
+-- ou use o phpMyAdmin para criar um novo banco
+-- =====================================================
+
+-- Criar e usar o banco de dados
+CREATE DATABASE IF NOT EXISTS u411458227_studupss
+DEFAULT CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
 
 USE u411458227_studupss;
 
-SET FOREIGN_KEY_CHECKS = 0;
-
--- Remover tabelas se existirem
-DROP TABLE IF EXISTS contas_pagar;
-DROP TABLE IF EXISTS categorias;
-DROP TABLE IF EXISTS usuarios;
-
-SET FOREIGN_KEY_CHECKS = 1;
-
 -- =====================================================
--- TABELA: usuarios (SIMPLIFICADA)
+-- TABELA: usuarios
 -- =====================================================
 CREATE TABLE usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -44,7 +42,7 @@ CREATE TABLE categorias (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =====================================================
--- TABELA: contas_pagar (SIMPLIFICADA)
+-- TABELA: contas_pagar
 -- =====================================================
 CREATE TABLE contas_pagar (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -70,13 +68,11 @@ CREATE TABLE contas_pagar (
 -- DADOS INICIAIS
 -- =====================================================
 
--- Usuário Padrão
--- Email: admin@sistema.com
--- Senha: admin123
+-- Usuário administrador
 INSERT INTO usuarios (nome, email, senha, ativo) VALUES
 ('Administrador', 'admin@sistema.com', '$2y$10$eUITICgfgN5.ZZ6wI1N.HOqYKQcuV0WfGZJslGbELRdSCKwzRZfBi', TRUE);
 
--- Categorias Padrão (associadas ao usuário admin - id 1)
+-- Categorias padrão
 INSERT INTO categorias (usuario_id, nome, cor, ativo) VALUES
 (1, 'Alimentação', '#e74c3c', TRUE),
 (1, 'Transporte', '#3498db', TRUE),
@@ -90,7 +86,7 @@ INSERT INTO categorias (usuario_id, nome, cor, ativo) VALUES
 -- =====================================================
 -- VIEW: Estatísticas do Dashboard
 -- =====================================================
-CREATE OR REPLACE VIEW v_dashboard_stats AS
+CREATE VIEW v_dashboard_stats AS
 SELECT
     u.id as usuario_id,
     COUNT(CASE WHEN c.status = 'pendente' THEN 1 END) as total_pendentes,
@@ -105,13 +101,11 @@ LEFT JOIN contas_pagar c ON u.id = c.usuario_id
 GROUP BY u.id;
 
 -- =====================================================
--- FIM DO SCRIPT
+-- VERIFICAÇÃO
 -- =====================================================
-
--- Verificar criação
-SELECT 'Banco de dados criado com sucesso!' as status;
-SELECT COUNT(*) as total_usuarios FROM usuarios;
-SELECT COUNT(*) as total_categorias FROM categorias;
+SELECT '✅ Instalação concluída com sucesso!' as status;
+SELECT CONCAT('Usuários: ', COUNT(*)) as total FROM usuarios;
+SELECT CONCAT('Categorias: ', COUNT(*)) as total FROM categorias;
 
 -- =====================================================
 -- CREDENCIAIS DE ACESSO
@@ -119,5 +113,5 @@ SELECT COUNT(*) as total_categorias FROM categorias;
 -- Email: admin@sistema.com
 -- Senha: admin123
 --
--- IMPORTANTE: Altere a senha após o primeiro login!
+-- ⚠️ ALTERE A SENHA APÓS O PRIMEIRO LOGIN!
 -- =====================================================
