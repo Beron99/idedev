@@ -27,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $valor = floatval(str_replace(',', '.', str_replace('.', '', $_POST['valor'])));
                 $data_vencimento = $_POST['data_vencimento'];
                 $categoria_id = intval($_POST['categoria_id']) ?: null;
+                $cliente_id = intval($_POST['cliente_id']) ?: null;
                 $cliente = limparEntrada($_POST['cliente']);
                 $observacoes = limparEntrada($_POST['observacoes']);
 
@@ -35,8 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     throw new Exception('O valor deve ser maior que zero');
                 }
 
-            $stmt = $pdo->prepare("INSERT INTO contas_receber (usuario_id, categoria_id, descricao, valor, data_vencimento, cliente, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$usuario_id, $categoria_id, $descricao, $valor, $data_vencimento, $cliente, $observacoes]);
+            $stmt = $pdo->prepare("INSERT INTO contas_receber (usuario_id, categoria_id, cliente_id, descricao, valor, data_vencimento, cliente, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$usuario_id, $categoria_id, $cliente_id, $descricao, $valor, $data_vencimento, $cliente, $observacoes]);
 
                 logSeguranca('info', "Conta a receber adicionada: $descricao (R$ $valor)", $usuario_id);
 
@@ -49,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $valor = floatval(str_replace(',', '.', str_replace('.', '', $_POST['valor'])));
                 $data_vencimento = $_POST['data_vencimento'];
                 $categoria_id = intval($_POST['categoria_id']) ?: null;
+                $cliente_id = intval($_POST['cliente_id']) ?: null;
                 $cliente = limparEntrada($_POST['cliente']);
                 $observacoes = limparEntrada($_POST['observacoes']);
 
@@ -57,8 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     throw new Exception('O valor deve ser maior que zero');
                 }
 
-            $stmt = $pdo->prepare("UPDATE contas_receber SET descricao = ?, valor = ?, data_vencimento = ?, categoria_id = ?, cliente = ?, observacoes = ? WHERE id = ? AND usuario_id = ?");
-            $stmt->execute([$descricao, $valor, $data_vencimento, $categoria_id, $cliente, $observacoes, $id, $usuario_id]);
+            $stmt = $pdo->prepare("UPDATE contas_receber SET descricao = ?, valor = ?, data_vencimento = ?, categoria_id = ?, cliente_id = ?, cliente = ?, observacoes = ? WHERE id = ? AND usuario_id = ?");
+            $stmt->execute([$descricao, $valor, $data_vencimento, $categoria_id, $cliente_id, $cliente, $observacoes, $id, $usuario_id]);
 
                 logSeguranca('info', "Conta a receber editada ID: $id", $usuario_id);
 
@@ -111,6 +113,15 @@ $stmt = $pdo->prepare("SELECT * FROM categorias WHERE usuario_id = ? ORDER BY no
 $stmt->execute([$usuario_id]);
 $categorias = $stmt->fetchAll();
 
+// Buscar clientes ativos
+try {
+    $stmt = $pdo->prepare("SELECT id, razao_social, nome_fantasia FROM clientes WHERE usuario_id = ? AND ativo = 1 ORDER BY razao_social");
+    $stmt->execute([$usuario_id]);
+    $clientes = $stmt->fetchAll();
+} catch(PDOException $e) {
+    $clientes = [];
+}
+
 // Buscar contas com filtros
 $where = ["c.usuario_id = ?"];
 $params = [$usuario_id];
@@ -131,9 +142,11 @@ if ($filtro_mes) {
 }
 
 $sql = "
-    SELECT c.*, cat.nome as categoria_nome, cat.cor as categoria_cor
+    SELECT c.*, cat.nome as categoria_nome, cat.cor as categoria_cor,
+           cli.razao_social as cliente_nome, cli.nome_fantasia as cliente_fantasia
     FROM contas_receber c
     LEFT JOIN categorias cat ON c.categoria_id = cat.id
+    LEFT JOIN clientes cli ON c.cliente_id = cli.id
     WHERE " . implode(' AND ', $where) . "
     ORDER BY c.data_vencimento DESC
 ";
@@ -169,6 +182,7 @@ $pdo->prepare("UPDATE contas_receber SET status = 'vencido' WHERE status = 'pend
                 <a href="dashboard.php" class="nav-item">Dashboard</a>
                 <a href="contas.php" class="nav-item">Contas a Pagar</a>
                 <a href="contas_receber.php" class="nav-item active">Contas a Receber</a>
+                <a href="clientes.php" class="nav-item">Clientes</a>
                 <a href="categorias.php" class="nav-item">Categorias</a>
             </div>
 
@@ -234,7 +248,20 @@ $pdo->prepare("UPDATE contas_receber SET status = 'vencido' WHERE status = 'pend
                                             <br><small class="observacao"><?php echo htmlspecialchars($conta['observacoes']); ?></small>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?php echo htmlspecialchars($conta['cliente'] ?: '-'); ?></td>
+                                    <td>
+                                        <?php
+                                        if ($conta['cliente_nome']) {
+                                            echo htmlspecialchars($conta['cliente_nome']);
+                                            if ($conta['cliente_fantasia']) {
+                                                echo '<br><small style="color: #999;">' . htmlspecialchars($conta['cliente_fantasia']) . '</small>';
+                                            }
+                                        } elseif ($conta['cliente']) {
+                                            echo htmlspecialchars($conta['cliente']);
+                                        } else {
+                                            echo '-';
+                                        }
+                                        ?>
+                                    </td>
                                     <td>
                                         <?php if ($conta['categoria_nome']): ?>
                                             <span class="badge-categoria" style="background-color: <?php echo $conta['categoria_cor']; ?>">
@@ -298,9 +325,27 @@ $pdo->prepare("UPDATE contas_receber SET status = 'vencido' WHERE status = 'pend
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="cliente">Cliente/Pagador</label>
-                    <input type="text" id="cliente" name="cliente" placeholder="Nome do cliente">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cliente_id">Cliente Cadastrado</label>
+                        <select id="cliente_id" name="cliente_id" onchange="atualizarCampoCliente()">
+                            <option value="">Selecione um cliente...</option>
+                            <?php foreach ($clientes as $cli): ?>
+                                <option value="<?php echo $cli['id']; ?>" data-nome="<?php echo htmlspecialchars($cli['razao_social']); ?>">
+                                    <?php echo htmlspecialchars($cli['razao_social']); ?>
+                                    <?php if ($cli['nome_fantasia']): ?>
+                                        (<?php echo htmlspecialchars($cli['nome_fantasia']); ?>)
+                                    <?php endif; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small style="color: #999;">Ou digite o nome abaixo</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cliente">Nome do Cliente</label>
+                        <input type="text" id="cliente" name="cliente" placeholder="Digite manualmente se não estiver cadastrado">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -338,6 +383,16 @@ $pdo->prepare("UPDATE contas_receber SET status = 'vencido' WHERE status = 'pend
             document.getElementById('modalConta').style.display = 'none';
         }
 
+        function atualizarCampoCliente() {
+            const select = document.getElementById('cliente_id');
+            const clienteInput = document.getElementById('cliente');
+            const selectedOption = select.options[select.selectedIndex];
+
+            if (select.value) {
+                clienteInput.value = selectedOption.getAttribute('data-nome');
+            }
+        }
+
         function editarConta(conta) {
             document.getElementById('modalTitulo').textContent = 'Editar Conta a Receber';
             document.getElementById('formAcao').value = 'editar';
@@ -345,6 +400,7 @@ $pdo->prepare("UPDATE contas_receber SET status = 'vencido' WHERE status = 'pend
             document.getElementById('descricao').value = conta.descricao;
             document.getElementById('valor').value = parseFloat(conta.valor).toFixed(2).replace('.', ',');
             document.getElementById('data_vencimento').value = conta.data_vencimento;
+            document.getElementById('cliente_id').value = conta.cliente_id || '';
             document.getElementById('cliente').value = conta.cliente || '';
             document.getElementById('categoria_id').value = conta.categoria_id || '';
             document.getElementById('observacoes').value = conta.observacoes || '';

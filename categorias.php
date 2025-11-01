@@ -117,6 +117,7 @@ $categorias = $stmt->fetchAll();
                 <a href="dashboard.php" class="nav-item">Dashboard</a>
                 <a href="contas.php" class="nav-item">Contas a Pagar</a>
                 <a href="contas_receber.php" class="nav-item">Contas a Receber</a>
+                <a href="clientes.php" class="nav-item">Clientes</a>
                 <a href="categorias.php" class="nav-item active">Categorias</a>
             </div>
             <?php if ($mensagem): ?>
