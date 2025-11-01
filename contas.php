@@ -214,6 +214,7 @@ $contas = $stmt->fetchAll();
                         <option value="pendente" <?php echo $filtro_status == 'pendente' ? 'selected' : ''; ?>>Pendente</option>
                         <option value="pago" <?php echo $filtro_status == 'pago' ? 'selected' : ''; ?>>Pago</option>
                         <option value="vencido" <?php echo $filtro_status == 'vencido' ? 'selected' : ''; ?>>Vencido</option>
+                        <option value="recorrente" <?php echo $filtro_status == 'recorrente' ? 'selected' : ''; ?>>Recorrente</option>
                     </select>
 
                     <select name="categoria" onchange="this.form.submit()">
@@ -253,7 +254,7 @@ $contas = $stmt->fetchAll();
                                     <td>
                                         <strong><?php echo htmlspecialchars($conta['descricao']); ?></strong>
                                         <?php if ($conta['recorrente']): ?>
-                                            <span style="display: inline-block; margin-left: 5px; padding: 2px 8px; background: #667eea; color: white; border-radius: 10px; font-size: 11px; font-weight: 600;">
+                                            <span style="display: inline-block; margin-left: 5px; padding: 2px 8px; background: #9b59b6; color: white; border-radius: 10px; font-size: 11px; font-weight: 600;">
                                                 🔄 RECORRENTE
                                             </span>
                                         <?php endif; ?>
