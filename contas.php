@@ -29,13 +29,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $categoria_id = intval($_POST['categoria_id']) ?: null;
                 $observacoes = limparEntrada($_POST['observacoes']);
 
+                // Campos de recorrência
+                $recorrente = isset($_POST['recorrente']) ? 1 : 0;
+                $tipo_recorrencia = $_POST['tipo_recorrencia'] ?? 'mensal';
+                $dia_vencimento_recorrente = $recorrente ? intval($_POST['dia_vencimento_recorrente']) : null;
+                $data_fim_recorrencia = !empty($_POST['data_fim_recorrencia']) ? $_POST['data_fim_recorrencia'] : null;
+
                 // Validar valor positivo
                 if ($valor <= 0) {
                     throw new Exception('O valor deve ser maior que zero');
                 }
 
-            $stmt = $pdo->prepare("INSERT INTO contas_pagar (usuario_id, categoria_id, descricao, valor, data_vencimento, observacoes) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$usuario_id, $categoria_id, $descricao, $valor, $data_vencimento, $observacoes]);
+            $stmt = $pdo->prepare("INSERT INTO contas_pagar (usuario_id, categoria_id, descricao, valor, data_vencimento, observacoes, recorrente, tipo_recorrencia, dia_vencimento_recorrente, data_fim_recorrencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$usuario_id, $categoria_id, $descricao, $valor, $data_vencimento, $observacoes, $recorrente, $tipo_recorrencia, $dia_vencimento_recorrente, $data_fim_recorrencia]);
 
                 logSeguranca('info', "Conta adicionada: $descricao (R$ $valor)", $usuario_id);
 
@@ -50,13 +56,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $categoria_id = intval($_POST['categoria_id']) ?: null;
                 $observacoes = limparEntrada($_POST['observacoes']);
 
+                // Campos de recorrência
+                $recorrente = isset($_POST['recorrente']) ? 1 : 0;
+                $tipo_recorrencia = $_POST['tipo_recorrencia'] ?? 'mensal';
+                $dia_vencimento_recorrente = $recorrente ? intval($_POST['dia_vencimento_recorrente']) : null;
+                $data_fim_recorrencia = !empty($_POST['data_fim_recorrencia']) ? $_POST['data_fim_recorrencia'] : null;
+
                 // Validar valor positivo
                 if ($valor <= 0) {
                     throw new Exception('O valor deve ser maior que zero');
                 }
 
-            $stmt = $pdo->prepare("UPDATE contas_pagar SET descricao = ?, valor = ?, data_vencimento = ?, categoria_id = ?, observacoes = ? WHERE id = ? AND usuario_id = ?");
-            $stmt->execute([$descricao, $valor, $data_vencimento, $categoria_id, $observacoes, $id, $usuario_id]);
+            $stmt = $pdo->prepare("UPDATE contas_pagar SET descricao = ?, valor = ?, data_vencimento = ?, categoria_id = ?, observacoes = ?, recorrente = ?, tipo_recorrencia = ?, dia_vencimento_recorrente = ?, data_fim_recorrencia = ? WHERE id = ? AND usuario_id = ?");
+            $stmt->execute([$descricao, $valor, $data_vencimento, $categoria_id, $observacoes, $recorrente, $tipo_recorrencia, $dia_vencimento_recorrente, $data_fim_recorrencia, $id, $usuario_id]);
 
                 logSeguranca('info', "Conta editada ID: $id", $usuario_id);
 
@@ -225,6 +237,11 @@ $contas = $stmt->fetchAll();
                                 <tr>
                                     <td>
                                         <strong><?php echo htmlspecialchars($conta['descricao']); ?></strong>
+                                        <?php if ($conta['recorrente']): ?>
+                                            <span style="display: inline-block; margin-left: 5px; padding: 2px 8px; background: #667eea; color: white; border-radius: 10px; font-size: 11px; font-weight: 600;">
+                                                🔄 RECORRENTE
+                                            </span>
+                                        <?php endif; ?>
                                         <?php if ($conta['observacoes']): ?>
                                             <br><small class="observacao"><?php echo htmlspecialchars($conta['observacoes']); ?></small>
                                         <?php endif; ?>
@@ -307,6 +324,51 @@ $contas = $stmt->fetchAll();
                     <textarea id="observacoes" name="observacoes" rows="3"></textarea>
                 </div>
 
+                <!-- Seção de Recorrência -->
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="recorrente" name="recorrente" value="1" onchange="toggleRecorrencia()">
+                            <strong>Conta Recorrente (Fixa Mensal)</strong>
+                        </label>
+                        <small style="color: #999; display: block; margin-top: 5px;">Marque se esta conta se repete todos os meses (ex: aluguel, internet, etc.)</small>
+                    </div>
+
+                    <div id="campos_recorrencia" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="tipo_recorrencia">Tipo de Recorrência *</label>
+                                <select id="tipo_recorrencia" name="tipo_recorrencia">
+                                    <option value="mensal">Mensal</option>
+                                    <option value="bimestral">Bimestral (a cada 2 meses)</option>
+                                    <option value="trimestral">Trimestral (a cada 3 meses)</option>
+                                    <option value="semestral">Semestral (a cada 6 meses)</option>
+                                    <option value="anual">Anual (todo ano)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="dia_vencimento_recorrente">Dia do Vencimento *</label>
+                                <input type="number" id="dia_vencimento_recorrente" name="dia_vencimento_recorrente" min="1" max="31" placeholder="Ex: 10">
+                                <small style="color: #999; display: block; margin-top: 3px;">Dia do mês para vencer (1 a 31)</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="data_fim_recorrencia">Data de Fim (Opcional)</label>
+                            <input type="date" id="data_fim_recorrencia" name="data_fim_recorrencia">
+                            <small style="color: #999; display: block; margin-top: 3px;">Deixe em branco se a conta é indefinida</small>
+                        </div>
+
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                            <p style="margin: 0; font-size: 13px; color: #856404;">
+                                <strong>ℹ️ Como funciona:</strong><br>
+                                Esta conta será salva como modelo. Todo mês, o sistema pode gerar automaticamente uma nova conta com base neste modelo.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <button type="button" onclick="fecharModal()" class="btn btn-secondary">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Salvar</button>
@@ -316,10 +378,27 @@ $contas = $stmt->fetchAll();
     </div>
 
     <script>
+        function toggleRecorrencia() {
+            const checkbox = document.getElementById('recorrente');
+            const campos = document.getElementById('campos_recorrencia');
+            campos.style.display = checkbox.checked ? 'block' : 'none';
+
+            // Se marcar recorrente, pegar o dia do vencimento automaticamente
+            if (checkbox.checked) {
+                const dataVencimento = document.getElementById('data_vencimento').value;
+                if (dataVencimento) {
+                    const dia = new Date(dataVencimento + 'T00:00:00').getDate();
+                    document.getElementById('dia_vencimento_recorrente').value = dia;
+                }
+            }
+        }
+
         function abrirModal() {
             document.getElementById('modalTitulo').textContent = 'Nova Conta';
             document.getElementById('formAcao').value = 'adicionar';
             document.getElementById('formConta').reset();
+            document.getElementById('recorrente').checked = false;
+            document.getElementById('campos_recorrencia').style.display = 'none';
             document.getElementById('modalConta').style.display = 'flex';
         }
 
@@ -336,6 +415,14 @@ $contas = $stmt->fetchAll();
             document.getElementById('data_vencimento').value = conta.data_vencimento;
             document.getElementById('categoria_id').value = conta.categoria_id || '';
             document.getElementById('observacoes').value = conta.observacoes || '';
+
+            // Campos de recorrência
+            document.getElementById('recorrente').checked = conta.recorrente == 1;
+            document.getElementById('tipo_recorrencia').value = conta.tipo_recorrencia || 'mensal';
+            document.getElementById('dia_vencimento_recorrente').value = conta.dia_vencimento_recorrente || '';
+            document.getElementById('data_fim_recorrencia').value = conta.data_fim_recorrencia || '';
+            document.getElementById('campos_recorrencia').style.display = conta.recorrente == 1 ? 'block' : 'none';
+
             document.getElementById('modalConta').style.display = 'flex';
         }
 
