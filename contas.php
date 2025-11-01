@@ -30,13 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $observacoes = limparEntrada($_POST['observacoes']);
 
                 // Campos de recorrência
-                $recorrente = isset($_POST['recorrente']) ? 1 : 0;
+                $recorrente = intval($_POST['recorrente'] ?? 0);
                 $tipo_recorrencia = $_POST['tipo_recorrencia'] ?? 'mensal';
                 $dia_vencimento_recorrente = $recorrente ? intval($_POST['dia_vencimento_recorrente']) : null;
                 $data_fim_recorrencia = !empty($_POST['data_fim_recorrencia']) ? $_POST['data_fim_recorrencia'] : null;
 
                 // Definir status baseado no tipo de conta
-                $status = $recorrente ? 'recorrente' : 'pendente';
+                $status = ($recorrente == 1) ? 'recorrente' : 'pendente';
 
                 // Validar valor positivo
                 if ($valor <= 0) {
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $observacoes = limparEntrada($_POST['observacoes']);
 
                 // Campos de recorrência
-                $recorrente = isset($_POST['recorrente']) ? 1 : 0;
+                $recorrente = intval($_POST['recorrente'] ?? 0);
                 $tipo_recorrencia = $_POST['tipo_recorrencia'] ?? 'mensal';
                 $dia_vencimento_recorrente = $recorrente ? intval($_POST['dia_vencimento_recorrente']) : null;
                 $data_fim_recorrencia = !empty($_POST['data_fim_recorrencia']) ? $_POST['data_fim_recorrencia'] : null;
@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if ($conta_atual && $conta_atual['gerada_automaticamente']) {
                     $status = $conta_atual['status']; // Manter status original (pendente, pago, vencido)
                 } else {
-                    $status = $recorrente ? 'recorrente' : 'pendente';
+                    $status = ($recorrente == 1) ? 'recorrente' : 'pendente';
                 }
 
                 // Validar valor positivo
