@@ -1,307 +1,241 @@
-# 🚀 Instalação Simples - 3 Passos
+# Instalação Simplificada - Sistema de Contas a Pagar
 
-## ⚠️ ANTES DE COMEÇAR
-
-### No phpMyAdmin:
-1. **Clique no nome do seu banco de dados** na lateral esquerda: `u411458227_studupss`
-2. O banco ficará **destacado/selecionado**
-3. Agora pode executar os SQLs
+Sistema essencial de gestão de contas a pagar com apenas os recursos fundamentais.
 
 ---
 
-## 📝 PASSO 1: Estrutura Básica
+## 1. Execute o Banco de Dados
 
-### Arquivo: `database_fixo.sql`
+### Passo 1: Abra o phpMyAdmin
+Acesse: `http://localhost/phpmyadmin` ou o painel do seu servidor
 
-1. Abra o arquivo **database_fixo.sql**
-2. Copie **TODO** o conteúdo
-3. No phpMyAdmin, vá na aba **SQL**
-4. Cole o conteúdo
-5. Clique em **Executar**
+### Passo 2: Selecione o Banco de Dados
+Clique no banco: `u411458227_studupss`
 
-✅ **Resultado:** Tabelas `usuarios`, `categorias` e `contas_pagar` criadas
-
----
-
-## 📝 PASSO 2: Sistema Administrativo
-
-### Arquivo: `database_update_fixo.sql`
-
-1. Abra o arquivo **database_update_fixo.sql**
-2. Copie **TODO** o conteúdo
-3. No phpMyAdmin, aba **SQL**
-4. Cole o conteúdo
-5. Clique em **Executar**
-
-⚠️ **Se aparecer erro "Duplicate column name", ignore** - significa que a coluna já existe.
-
-✅ **Resultado:**
-- Tabelas `departamentos` e `auditoria` criadas
-- 7 departamentos inseridos
-- Usuário admin criado
-- Novas colunas adicionadas
+### Passo 3: Importe o Arquivo SQL
+1. Clique na aba **SQL**
+2. Copie e cole o conteúdo do arquivo **`database_simples.sql`**
+3. Clique em **Executar**
 
 ---
 
-## 📝 PASSO 3: Recursos Avançados
+## 2. Credenciais de Acesso
 
-### Arquivo: Execute BLOCO POR BLOCO
+Acesse: `http://seusite.com/login.php`
 
-⚠️ **IMPORTANTE:** Não copie tudo de uma vez! Execute cada bloco separadamente.
-
-### BLOCO 1 - Colunas de Aprovação
-
-Cole e execute **cada linha separadamente**:
-
-```sql
-USE u411458227_studupss;
-
-ALTER TABLE contas_pagar
-ADD COLUMN aprovacao_status ENUM('pendente', 'aprovado', 'rejeitado') DEFAULT 'pendente' AFTER prioridade;
+```
+Email: admin@sistema.com
+Senha: admin123
 ```
 
-Se der erro "Duplicate column", ignore e passe para a próxima.
+**IMPORTANTE:** Altere a senha após o primeiro login!
 
-```sql
-ALTER TABLE contas_pagar
-ADD COLUMN aprovado_por INT AFTER aprovacao_status;
+---
+
+## 3. Estrutura do Sistema
+
+### Arquivos Essenciais (13 arquivos)
+
 ```
-
-```sql
-ALTER TABLE contas_pagar
-ADD COLUMN data_aprovacao TIMESTAMP NULL AFTER aprovado_por;
-```
-
-```sql
-ALTER TABLE contas_pagar
-ADD COLUMN motivo_rejeicao TEXT AFTER data_aprovacao;
-```
-
-```sql
-ALTER TABLE contas_pagar
-ADD INDEX idx_aprovacao (aprovacao_status);
-```
-
-```sql
-ALTER TABLE contas_pagar
-ADD INDEX idx_aprovado_por (aprovado_por);
-```
-
-```sql
-ALTER TABLE contas_pagar
-ADD CONSTRAINT fk_aprovado_por
-FOREIGN KEY (aprovado_por) REFERENCES usuarios(id) ON DELETE SET NULL;
+📁 Sistema de Contas a Pagar
+├── 🔐 Autenticação
+│   ├── login.php          - Login no sistema
+│   ├── cadastro.php       - Cadastro de novos usuários
+│   └── logout.php         - Sair do sistema
+│
+├── 📊 Páginas Principais
+│   ├── dashboard.php      - Painel com estatísticas e gráficos
+│   ├── contas.php         - Gerenciar contas a pagar
+│   └── categorias.php     - Gerenciar categorias
+│
+├── ⚙️ Configurações
+│   ├── config.php         - Conexão com banco de dados
+│   ├── security.php       - Funções de segurança (CSRF, sessões)
+│   └── style.css          - Estilos do sistema
+│
+└── 🗄️ Banco de Dados
+    └── database_simples.sql - SQL simplificado (3 tabelas)
 ```
 
 ---
 
-### BLOCO 2 - Tabela de Metas
+## 4. Recursos do Sistema
 
-```sql
-CREATE TABLE IF NOT EXISTS metas_orcamentos (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    departamento_id INT NOT NULL,
-    categoria_id INT,
-    mes_ano DATE NOT NULL,
-    valor_orcado DECIMAL(10, 2) NOT NULL,
-    valor_gasto DECIMAL(10, 2) DEFAULT 0,
-    percentual_utilizado DECIMAL(5, 2) DEFAULT 0,
-    status ENUM('ok', 'atencao', 'estourado') DEFAULT 'ok',
-    observacoes TEXT,
-    criado_por INT,
-    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (departamento_id) REFERENCES departamentos(id) ON DELETE CASCADE,
-    FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE SET NULL,
-    FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
-    UNIQUE KEY uk_meta (departamento_id, categoria_id, mes_ano),
-    INDEX idx_mes_ano (mes_ano),
-    INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+### O que o sistema FAZ:
+
+- ✅ **Login e Cadastro** - Autenticação de usuários
+- ✅ **Dashboard** - Visão geral com estatísticas e gráficos
+- ✅ **Contas a Pagar** - Adicionar, editar, excluir e marcar como pago
+- ✅ **Categorias** - Organizar despesas por categoria
+- ✅ **Filtros** - Filtrar por status, categoria e mês
+- ✅ **Gráficos** - Chart.js para visualização de dados
+- ✅ **Segurança Básica** - CSRF, sessões seguras, rate limiting
+
+### O que o sistema NÃO FAZ:
+
+- ❌ Sistema de departamentos
+- ❌ Níveis de acesso (admin/gestor/usuário)
+- ❌ Kanban
+- ❌ Aprovação de despesas
+- ❌ Auditoria detalhada
+- ❌ Metas e orçamentos
+- ❌ Upload de anexos
+
+---
+
+## 5. Tabelas do Banco de Dados
+
+### 3 Tabelas:
+
+1. **usuarios** - Usuários do sistema
+   - id, nome, email, senha, ativo
+
+2. **categorias** - Categorias de despesas
+   - id, usuario_id, nome, cor, ativo
+
+3. **contas_pagar** - Contas a pagar
+   - id, usuario_id, categoria_id, descricao, valor, data_vencimento, data_pagamento, status, observacoes
+
+---
+
+## 6. Configurar Conexão com Banco
+
+Edite o arquivo **`config.php`**:
+
+```php
+$host = 'localhost';
+$dbname = 'u411458227_studupss';
+$username = 'SEU_USUARIO';  // <- ALTERE AQUI
+$password = 'SUA_SENHA';     // <- ALTERE AQUI
 ```
 
 ---
 
-### BLOCO 3 - Tabela de Notificações
+## 7. Estrutura de Pastas
 
-```sql
-CREATE TABLE IF NOT EXISTS notificacoes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    usuario_id INT NOT NULL,
-    tipo ENUM('info', 'aviso', 'sucesso', 'erro') DEFAULT 'info',
-    titulo VARCHAR(255) NOT NULL,
-    mensagem TEXT NOT NULL,
-    link VARCHAR(255),
-    lida BOOLEAN DEFAULT FALSE,
-    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    INDEX idx_usuario_lida (usuario_id, lida),
-    INDEX idx_data (data_criacao)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+Não precisa criar pastas adicionais. Todos os arquivos ficam na raiz.
+
+---
+
+## 8. Como Usar
+
+### Primeiro Acesso
+
+1. Acesse `login.php`
+2. Entre com: `admin@sistema.com` / `admin123`
+3. Você será redirecionado para o dashboard
+
+### Adicionar uma Conta
+
+1. Vá em **Contas a Pagar**
+2. Clique em **+ Nova Conta**
+3. Preencha:
+   - Descrição (ex: "Conta de Luz")
+   - Valor (ex: "150,00")
+   - Vencimento (ex: "15/02/2025")
+   - Categoria (opcional)
+   - Observações (opcional)
+4. Clique em **Salvar**
+
+### Marcar como Pago
+
+1. Na lista de contas, clique no botão **✓** (check)
+2. Informe a data do pagamento (ou deixe em branco para hoje)
+3. Confirme
+
+### Criar Categorias
+
+1. Vá em **Categorias**
+2. Clique em **+ Nova Categoria**
+3. Escolha o nome e a cor
+4. Salve
+
+---
+
+## 9. Solução de Problemas
+
+### Não consigo fazer login
+
+**Solução:**
+1. Limpe o cache do navegador (Ctrl+Shift+Delete)
+2. Verifique se executou o `database_simples.sql`
+3. Use: `admin@sistema.com` / `admin123`
+
+### Erro de conexão com banco
+
+**Solução:**
+1. Verifique o arquivo `config.php`
+2. Confirme que o banco `u411458227_studupss` existe
+3. Teste as credenciais de acesso ao MySQL
+
+### Erro "Token de segurança inválido"
+
+**Solução:**
+1. Limpe os cookies do navegador
+2. Recarregue a página (F5)
+3. Tente novamente
+
+---
+
+## 10. Requisitos
+
+- PHP 7.4+
+- MySQL 5.7+
+- Navegador moderno (Chrome, Firefox, Edge)
+
+---
+
+## 11. Segurança
+
+O sistema possui:
+
+- ✅ Proteção CSRF em todos os formulários
+- ✅ Sessões seguras (httponly, secure, samesite)
+- ✅ Rate limiting (5 tentativas de login por 5 minutos)
+- ✅ Senhas criptografadas com bcrypt
+- ✅ Prepared statements (proteção SQL injection)
+- ✅ Sanitização de inputs (proteção XSS)
+
+---
+
+## 12. Arquivos Removidos
+
+Os seguintes arquivos **NÃO são necessários** na versão simplificada:
+
+```
+❌ admin.php
+❌ admin_dashboard.php
+❌ admin_usuarios.php
+❌ admin_usuarios_ajax.php
+❌ admin_departamentos.php
+❌ admin_departamentos_ajax.php
+❌ admin_auditoria.php
+❌ kanban.php
+❌ kanban_ajax.php
+❌ permissions.php
+❌ painel.php
+❌ database_completo.sql (use database_simples.sql)
+❌ gerar_senha.php
+❌ resetar_senha_admin.php
+```
+
+Você pode deletar esses arquivos se quiser manter apenas o essencial.
+
+---
+
+## 13. Resumo da Instalação
+
+```
+1. Importe database_simples.sql no phpMyAdmin
+2. Configure config.php com suas credenciais
+3. Acesse login.php
+4. Entre com: admin@sistema.com / admin123
+5. Comece a usar!
 ```
 
 ---
 
-### BLOCO 4 - Tabela de Relatórios
+**Tempo de instalação:** 5 minutos
 
-```sql
-CREATE TABLE IF NOT EXISTS relatorios_salvos (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(255) NOT NULL,
-    tipo ENUM('excel', 'pdf') NOT NULL,
-    filtros JSON,
-    arquivo VARCHAR(255) NOT NULL,
-    criado_por INT,
-    departamento_id INT,
-    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
-    FOREIGN KEY (departamento_id) REFERENCES departamentos(id) ON DELETE CASCADE,
-    INDEX idx_criado_por (criado_por),
-    INDEX idx_departamento (departamento_id),
-    INDEX idx_data (data_criacao)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
-
----
-
-### BLOCO 5 - Tabela de Configurações
-
-```sql
-CREATE TABLE IF NOT EXISTS configuracoes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    chave VARCHAR(100) NOT NULL UNIQUE,
-    valor TEXT,
-    descricao TEXT,
-    tipo ENUM('text', 'number', 'boolean', 'json') DEFAULT 'text',
-    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_chave (chave)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
-
----
-
-### BLOCO 6 - Configurações Padrão
-
-```sql
-INSERT INTO configuracoes (chave, valor, descricao, tipo) VALUES
-('dias_aviso_vencimento', '7', 'Dias antes do vencimento para enviar aviso', 'number'),
-('valor_minimo_aprovacao', '1000.00', 'Valor mínimo que requer aprovação do gestor', 'number'),
-('permitir_anexos', 'true', 'Permitir upload de anexos nas contas', 'boolean'),
-('tamanho_max_anexo', '5', 'Tamanho máximo do anexo em MB', 'number'),
-('tipos_anexo_permitidos', '["pdf","jpg","jpeg","png","doc","docx","xlsx"]', 'Tipos de arquivo permitidos', 'json'),
-('email_notificacoes', 'true', 'Enviar notificações por email', 'boolean')
-ON DUPLICATE KEY UPDATE chave=chave;
-```
-
----
-
-### BLOCO 7 - View para Dashboard
-
-```sql
-CREATE OR REPLACE VIEW v_dashboard_stats AS
-SELECT
-    d.id as departamento_id,
-    d.nome as departamento,
-    COUNT(DISTINCT u.id) as total_usuarios,
-    COUNT(DISTINCT c.id) as total_contas,
-    SUM(CASE WHEN c.status = 'pendente' THEN c.valor ELSE 0 END) as valor_pendente,
-    SUM(CASE WHEN c.status = 'pago' THEN c.valor ELSE 0 END) as valor_pago,
-    SUM(CASE WHEN c.status = 'vencido' THEN c.valor ELSE 0 END) as valor_vencido,
-    d.orcamento_mensal,
-    (SUM(CASE WHEN c.status = 'pago' AND MONTH(c.data_pagamento) = MONTH(CURRENT_DATE) THEN c.valor ELSE 0 END) / d.orcamento_mensal * 100) as percentual_gasto
-FROM departamentos d
-LEFT JOIN usuarios u ON d.id = u.departamento_id AND u.ativo = TRUE
-LEFT JOIN contas_pagar c ON d.id = c.departamento_id
-GROUP BY d.id, d.nome, d.orcamento_mensal;
-```
-
----
-
-### BLOCO 8 - Dados de Teste (OPCIONAL)
-
-```sql
-INSERT INTO metas_orcamentos (departamento_id, mes_ano, valor_orcado, criado_por)
-SELECT
-    id,
-    DATE_FORMAT(CURRENT_DATE, '%Y-%m-01'),
-    orcamento_mensal,
-    (SELECT id FROM usuarios WHERE role = 'admin' LIMIT 1)
-FROM departamentos
-ON DUPLICATE KEY UPDATE valor_orcado=valor_orcado;
-```
-
----
-
-## ✅ VERIFICAÇÃO FINAL
-
-Execute para verificar se tudo foi criado:
-
-```sql
-SHOW TABLES;
-```
-
-Você deve ter **9 tabelas**:
-- auditoria
-- categorias
-- configuracoes
-- contas_pagar
-- departamentos
-- metas_orcamentos
-- notificacoes
-- relatorios_salvos
-- usuarios
-
----
-
-## 🔑 FAZER LOGIN
-
-Após instalar tudo:
-
-**URL:** `http://seusite.com/login.php`
-
-**Email:** `admin@sistema.com`
-**Senha:** `Admin@123`
-
-⚠️ **IMPORTANTE:** Troque a senha após o primeiro login!
-
----
-
-## 📁 CRIAR PASTA PARA ANEXOS
-
-Via FTP ou Gerenciador de Arquivos:
-1. Crie a pasta: `uploads/anexos`
-2. Permissão: **755**
-
----
-
-## 🎯 PÁGINAS DO SISTEMA
-
-Após login como admin, acesse:
-
-- **Dashboard:** `dashboard.php`
-- **Contas a Pagar:** `contas.php`
-- **Categorias:** `categorias.php`
-- **Admin Dashboard:** `admin.php?acao=dashboard`
-- **Gerenciar Usuários:** `admin.php?acao=usuarios`
-- **Gerenciar Departamentos:** `admin.php?acao=departamentos`
-- **Log de Auditoria:** `admin.php?acao=auditoria`
-- **Kanban:** `kanban.php`
-
----
-
-## ❌ POSSÍVEIS ERROS
-
-### Erro: "Nenhum banco de dados foi selecionado"
-**Solução:** Clique no nome do banco `u411458227_studupss` na lateral esquerda do phpMyAdmin ANTES de executar o SQL.
-
-### Erro: "Duplicate column name"
-**Solução:** A coluna já existe. Ignore e continue.
-
-### Erro: "Table already exists"
-**Solução:** A tabela já foi criada. Continue para o próximo bloco.
-
----
-
-## 🎉 PRONTO!
-
-Seu sistema está completo e funcional! 🚀
+**Sistema criado em:** 2025
+**Versão:** 1.0 Simplificada
