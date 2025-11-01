@@ -24,11 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         try {
             if ($acao == 'adicionar') {
                 $nome = limparEntrada($_POST['nome']);
-                $descricao = limparEntrada($_POST['descricao']);
                 $cor = $_POST['cor'];
 
-            $stmt = $pdo->prepare("INSERT INTO categorias (nome, descricao, cor, usuario_id) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$nome, $descricao, $cor, $usuario_id]);
+            $stmt = $pdo->prepare("INSERT INTO categorias (nome, cor, usuario_id) VALUES (?, ?, ?)");
+            $stmt->execute([$nome, $cor, $usuario_id]);
 
                 logSeguranca('info', "Categoria adicionada: $nome", $usuario_id);
 
@@ -38,11 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             } elseif ($acao == 'editar') {
                 $id = intval($_POST['id']);
                 $nome = limparEntrada($_POST['nome']);
-                $descricao = limparEntrada($_POST['descricao']);
                 $cor = $_POST['cor'];
 
-            $stmt = $pdo->prepare("UPDATE categorias SET nome = ?, descricao = ?, cor = ? WHERE id = ? AND usuario_id = ?");
-            $stmt->execute([$nome, $descricao, $cor, $id, $usuario_id]);
+            $stmt = $pdo->prepare("UPDATE categorias SET nome = ?, cor = ? WHERE id = ? AND usuario_id = ?");
+            $stmt->execute([$nome, $cor, $id, $usuario_id]);
 
                 logSeguranca('info', "Categoria editada ID: $id", $usuario_id);
 
@@ -142,7 +140,6 @@ $categorias = $stmt->fetchAll();
                             </div>
                             <div class="categoria-info">
                                 <h3><?php echo htmlspecialchars($cat['nome']); ?></h3>
-                                <p><?php echo htmlspecialchars($cat['descricao']); ?></p>
                             </div>
                         </div>
                         <div class="categoria-stats">
@@ -176,13 +173,8 @@ $categorias = $stmt->fetchAll();
                 <input type="hidden" name="id" id="formId">
 
                 <div class="form-group">
-                    <label for="nome">Nome *</label>
-                    <input type="text" id="nome" name="nome" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="descricao">Descrição</label>
-                    <input type="text" id="descricao" name="descricao">
+                    <label for="nome">Nome da Categoria *</label>
+                    <input type="text" id="nome" name="nome" required placeholder="Ex: Alimentação, Transporte...">
                 </div>
 
                 <div class="form-group">
@@ -220,7 +212,6 @@ $categorias = $stmt->fetchAll();
             document.getElementById('formAcao').value = 'editar';
             document.getElementById('formId').value = categoria.id;
             document.getElementById('nome').value = categoria.nome;
-            document.getElementById('descricao').value = categoria.descricao || '';
             document.getElementById('cor').value = categoria.cor;
             document.getElementById('corValor').textContent = categoria.cor;
             document.getElementById('modalCategoria').style.display = 'flex';

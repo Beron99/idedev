@@ -16,18 +16,18 @@ try {
 
     if ($stmt->fetchColumn() == 0) {
         $categorias_padrao = [
-            ['Alimentação', 'Gastos com alimentação e supermercado', '#FF6384'],
-            ['Transporte', 'Combustível, transporte público, manutenção', '#36A2EB'],
-            ['Moradia', 'Aluguel, condomínio, IPTU', '#FFCE56'],
-            ['Saúde', 'Plano de saúde, medicamentos, consultas', '#4BC0C0'],
-            ['Educação', 'Cursos, livros, material escolar', '#9966FF'],
-            ['Lazer', 'Entretenimento, viagens, hobbies', '#FF9F40'],
-            ['Outros', 'Despesas diversas', '#C9CBCF']
+            ['Alimentação', '#FF6384'],
+            ['Transporte', '#36A2EB'],
+            ['Moradia', '#FFCE56'],
+            ['Saúde', '#4BC0C0'],
+            ['Educação', '#9966FF'],
+            ['Lazer', '#FF9F40'],
+            ['Outros', '#C9CBCF']
         ];
 
-        $stmt = $pdo->prepare("INSERT INTO categorias (nome, descricao, cor, usuario_id) VALUES (?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO categorias (nome, cor, usuario_id) VALUES (?, ?, ?)");
         foreach ($categorias_padrao as $cat) {
-            $stmt->execute([$cat[0], $cat[1], $cat[2], $usuario_id]);
+            $stmt->execute([$cat[0], $cat[1], $usuario_id]);
         }
     }
 } catch(PDOException $e) {
