@@ -136,6 +136,49 @@
     margin: 30px 0;
 }
 
+/* === CARDS DE CONTAS RECORRENTES === */
+.conta-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.conta-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.conta-header {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.conta-header h4 {
+    margin: 8px 0 0 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.badge-recorrente {
+    display: inline-block;
+    margin-bottom: 5px;
+}
+
+.conta-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.conta-info > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .conta-item.pagar .conta-categoria {
     border-left: 3px solid #e74c3c;
 }

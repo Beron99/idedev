@@ -143,6 +143,29 @@ try {
         $receitas_30dias = 0;
     }
 
+    // === CONTAS RECORRENTES ===
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) as total, COALESCE(SUM(valor), 0) as soma
+        FROM contas_pagar
+        WHERE usuario_id = ? AND recorrente = TRUE
+        AND (data_fim_recorrencia IS NULL OR data_fim_recorrencia >= CURRENT_DATE())
+    ");
+    $stmt->execute([$usuario_id]);
+    $recorrentes_ativas = $stmt->fetch();
+
+    // Listar contas recorrentes ativas (top 5)
+    $stmt = $pdo->prepare("
+        SELECT cp.*, cat.nome as categoria_nome, cat.cor as categoria_cor
+        FROM contas_pagar cp
+        LEFT JOIN categorias cat ON cp.categoria_id = cat.id
+        WHERE cp.usuario_id = ? AND cp.recorrente = TRUE
+        AND (cp.data_fim_recorrencia IS NULL OR cp.data_fim_recorrencia >= CURRENT_DATE())
+        ORDER BY cp.valor DESC
+        LIMIT 5
+    ");
+    $stmt->execute([$usuario_id]);
+    $lista_recorrentes = $stmt->fetchAll();
+
     // === GASTOS POR CATEGORIA (últimos 30 dias) ===
     $stmt = $pdo->prepare("
         SELECT cat.nome, cat.cor, COALESCE(SUM(c.valor), 0) as total
@@ -304,6 +327,7 @@ try {
                 <a href="contas_receber.php" class="nav-item">Contas a Receber</a>
                 <a href="clientes.php" class="nav-item">Clientes</a>
                 <a href="categorias.php" class="nav-item">Categorias</a>
+                <a href="gerenciar_recorrentes.php" class="nav-item">🔄 Recorrentes</a>
             </div>
 
             <?php if (isset($erro)): ?>
@@ -401,6 +425,86 @@ try {
                         </div>
                     </div>
                 </div>
+            <?php endif; ?>
+
+            <!-- Contas Recorrentes -->
+            <?php if ($recorrentes_ativas['total'] > 0): ?>
+                <h3 class="secao-titulo">🔄 Contas Recorrentes Ativas</h3>
+                <div class="stats-grid">
+                    <div class="stat-card" style="border-left-color: #9b59b6;">
+                        <div class="stat-icon">🔄</div>
+                        <div class="stat-info">
+                            <h3>Total Recorrentes</h3>
+                            <p class="stat-number"><?php echo $recorrentes_ativas['total']; ?></p>
+                            <p class="stat-value">R$ <?php echo number_format($recorrentes_ativas['soma'], 2, ',', '.'); ?>/mês</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" style="border-left-color: #3498db;">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-info">
+                            <h3>Impacto Anual</h3>
+                            <p class="stat-value">R$ <?php echo number_format($recorrentes_ativas['soma'] * 12, 2, ',', '.'); ?></p>
+                            <small style="color: #666;">Projeção de 12 meses</small>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" style="border-left-color: #e74c3c;">
+                        <div class="stat-icon">⚙️</div>
+                        <div class="stat-info">
+                            <h3>Gerenciar</h3>
+                            <a href="gerenciar_recorrentes.php" class="btn btn-primary" style="margin-top: 10px; display: inline-block; padding: 8px 16px; text-decoration: none;">Ver Detalhes</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de Contas Recorrentes -->
+                <?php if (count($lista_recorrentes) > 0): ?>
+                    <div class="proximas-grid" style="margin-top: 20px;">
+                        <?php foreach ($lista_recorrentes as $rec): ?>
+                            <div class="conta-card" style="border-left: 4px solid <?php echo $rec['categoria_cor'] ?? '#9b59b6'; ?>">
+                                <div class="conta-header">
+                                    <span class="badge-recorrente" style="background: #9b59b6; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: bold;">🔄 RECORRENTE</span>
+                                    <h4><?php echo htmlspecialchars($rec['descricao']); ?></h4>
+                                </div>
+                                <div class="conta-info">
+                                    <div>
+                                        <span style="font-size: 12px; color: #666;">Tipo:</span>
+                                        <strong>
+                                            <?php
+                                            $tipos = [
+                                                'mensal' => 'Mensal',
+                                                'bimestral' => 'Bimestral',
+                                                'trimestral' => 'Trimestral',
+                                                'semestral' => 'Semestral',
+                                                'anual' => 'Anual'
+                                            ];
+                                            echo $tipos[$rec['tipo_recorrencia']] ?? 'Mensal';
+                                            ?>
+                                        </strong>
+                                    </div>
+                                    <div>
+                                        <span style="font-size: 12px; color: #666;">Vence dia:</span>
+                                        <strong><?php echo $rec['dia_vencimento_recorrente']; ?></strong>
+                                    </div>
+                                    <?php if ($rec['categoria_nome']): ?>
+                                        <div>
+                                            <span style="font-size: 12px; color: #666;">Categoria:</span>
+                                            <span style="background: <?php echo $rec['categoria_cor']; ?>; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">
+                                                <?php echo htmlspecialchars($rec['categoria_nome']); ?>
+                                            </span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div style="margin-top: 10px;">
+                                        <span style="font-size: 18px; font-weight: bold; color: #e74c3c;">
+                                            R$ <?php echo number_format($rec['valor'], 2, ',', '.'); ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
 
             <!-- Gráficos -->
