@@ -291,10 +291,27 @@ $contas = $stmt->fetchAll();
                 <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                 <input type="hidden" name="acao" id="formAcao" value="adicionar">
                 <input type="hidden" name="id" id="formId">
+                <input type="hidden" name="recorrente" id="recorrente" value="0">
 
+                <!-- Tipo de Conta -->
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <label style="font-weight: 600; color: #333; margin-bottom: 10px; display: block;">Tipo de Conta:</label>
+                    <div style="display: flex; gap: 20px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="tipo_conta" value="normal" checked onchange="alternarTipoConta()">
+                            <span>💳 Conta Normal (única vez)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="tipo_conta" value="recorrente" onchange="alternarTipoConta()">
+                            <span>🔄 Conta Recorrente (mensal)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Campos Comuns -->
                 <div class="form-group">
                     <label for="descricao">Descrição *</label>
-                    <input type="text" id="descricao" name="descricao" required>
+                    <input type="text" id="descricao" name="descricao" required placeholder="Ex: Aluguel, Internet, Luz...">
                 </div>
 
                 <div class="form-row">
@@ -304,69 +321,73 @@ $contas = $stmt->fetchAll();
                     </div>
 
                     <div class="form-group">
-                        <label for="data_vencimento">Vencimento *</label>
+                        <label for="categoria_id">Categoria</label>
+                        <select id="categoria_id" name="categoria_id">
+                            <option value="">Selecione uma categoria</option>
+                            <?php foreach ($categorias as $cat): ?>
+                                <option value="<?php echo $cat['id']; ?>"><?php echo htmlspecialchars($cat['nome']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Campos para Conta Normal -->
+                <div id="campos_conta_normal">
+                    <div class="form-group">
+                        <label for="data_vencimento">Data de Vencimento *</label>
                         <input type="date" id="data_vencimento" name="data_vencimento" required>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="categoria_id">Categoria</label>
-                    <select id="categoria_id" name="categoria_id">
-                        <option value="">Selecione uma categoria</option>
-                        <?php foreach ($categorias as $cat): ?>
-                            <option value="<?php echo $cat['id']; ?>"><?php echo htmlspecialchars($cat['nome']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+                <!-- Campos para Conta Recorrente -->
+                <div id="campos_conta_recorrente" style="display: none; background: #e8f4fd; padding: 20px; border-radius: 8px; border-left: 4px solid #3498db;">
+                    <h4 style="margin: 0 0 15px 0; color: #2980b9;">⚙️ Configurações de Recorrência</h4>
 
-                <div class="form-group">
-                    <label for="observacoes">Observações</label>
-                    <textarea id="observacoes" name="observacoes" rows="3"></textarea>
-                </div>
-
-                <!-- Seção de Recorrência -->
-                <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
-                    <div class="form-group">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                            <input type="checkbox" id="recorrente" name="recorrente" value="1" onchange="toggleRecorrencia()">
-                            <strong>Conta Recorrente (Fixa Mensal)</strong>
-                        </label>
-                        <small style="color: #999; display: block; margin-top: 5px;">Marque se esta conta se repete todos os meses (ex: aluguel, internet, etc.)</small>
-                    </div>
-
-                    <div id="campos_recorrencia" style="display: none;">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="tipo_recorrencia">Tipo de Recorrência *</label>
-                                <select id="tipo_recorrencia" name="tipo_recorrencia">
-                                    <option value="mensal">Mensal</option>
-                                    <option value="bimestral">Bimestral (a cada 2 meses)</option>
-                                    <option value="trimestral">Trimestral (a cada 3 meses)</option>
-                                    <option value="semestral">Semestral (a cada 6 meses)</option>
-                                    <option value="anual">Anual (todo ano)</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="dia_vencimento_recorrente">Dia do Vencimento *</label>
-                                <input type="number" id="dia_vencimento_recorrente" name="dia_vencimento_recorrente" min="1" max="31" placeholder="Ex: 10">
-                                <small style="color: #999; display: block; margin-top: 3px;">Dia do mês para vencer (1 a 31)</small>
-                            </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tipo_recorrencia">Frequência *</label>
+                            <select id="tipo_recorrencia" name="tipo_recorrencia">
+                                <option value="mensal">📅 Mensal (todo mês)</option>
+                                <option value="bimestral">📅 Bimestral (a cada 2 meses)</option>
+                                <option value="trimestral">📅 Trimestral (a cada 3 meses)</option>
+                                <option value="semestral">📅 Semestral (a cada 6 meses)</option>
+                                <option value="anual">📅 Anual (todo ano)</option>
+                            </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="data_fim_recorrencia">Data de Fim (Opcional)</label>
-                            <input type="date" id="data_fim_recorrencia" name="data_fim_recorrencia">
-                            <small style="color: #999; display: block; margin-top: 3px;">Deixe em branco se a conta é indefinida</small>
-                        </div>
-
-                        <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin-top: 10px;">
-                            <p style="margin: 0; font-size: 13px; color: #856404;">
-                                <strong>ℹ️ Como funciona:</strong><br>
-                                Esta conta será salva como modelo. Todo mês, o sistema pode gerar automaticamente uma nova conta com base neste modelo.
-                            </p>
+                            <label for="dia_vencimento_recorrente">Dia do Vencimento *</label>
+                            <input type="number" id="dia_vencimento_recorrente" name="dia_vencimento_recorrente" min="1" max="31" placeholder="Ex: 10">
+                            <small style="color: #666;">Dia do mês (1 a 31)</small>
                         </div>
                     </div>
+
+                    <div class="form-group">
+                        <label for="data_vencimento_primeira">Primeira Conta (Data) *</label>
+                        <input type="date" id="data_vencimento_primeira" name="data_vencimento" onchange="preencherDiaVencimento()">
+                        <small style="color: #666;">Data de vencimento da primeira conta gerada</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="data_fim_recorrencia">Data de Término (Opcional)</label>
+                        <input type="date" id="data_fim_recorrencia" name="data_fim_recorrencia">
+                        <small style="color: #666;">Deixe vazio para recorrência indefinida</small>
+                    </div>
+
+                    <div style="background: white; padding: 12px; border-radius: 5px; border-left: 3px solid #27ae60;">
+                        <p style="margin: 0; font-size: 13px; color: #555; line-height: 1.5;">
+                            <strong>✓ Como funciona:</strong><br>
+                            • A conta será salva como modelo<br>
+                            • Todo mês, você pode gerar automaticamente uma nova conta<br>
+                            • As contas geradas terão o mês/ano na descrição
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Observações (para ambos os tipos) -->
+                <div class="form-group" style="margin-top: 15px;">
+                    <label for="observacoes">Observações</label>
+                    <textarea id="observacoes" name="observacoes" rows="2" placeholder="Informações adicionais (opcional)"></textarea>
                 </div>
 
                 <div class="form-actions">
@@ -378,18 +399,33 @@ $contas = $stmt->fetchAll();
     </div>
 
     <script>
-        function toggleRecorrencia() {
-            const checkbox = document.getElementById('recorrente');
-            const campos = document.getElementById('campos_recorrencia');
-            campos.style.display = checkbox.checked ? 'block' : 'none';
+        function alternarTipoConta() {
+            const tipoSelecionado = document.querySelector('input[name="tipo_conta"]:checked').value;
+            const camposNormal = document.getElementById('campos_conta_normal');
+            const camposRecorrente = document.getElementById('campos_conta_recorrente');
+            const hiddenRecorrente = document.getElementById('recorrente');
 
-            // Se marcar recorrente, pegar o dia do vencimento automaticamente
-            if (checkbox.checked) {
-                const dataVencimento = document.getElementById('data_vencimento').value;
-                if (dataVencimento) {
-                    const dia = new Date(dataVencimento + 'T00:00:00').getDate();
-                    document.getElementById('dia_vencimento_recorrente').value = dia;
-                }
+            if (tipoSelecionado === 'normal') {
+                // Mostrar campos de conta normal
+                camposNormal.style.display = 'block';
+                camposRecorrente.style.display = 'none';
+                hiddenRecorrente.value = '0';
+            } else {
+                // Mostrar campos de conta recorrente
+                camposNormal.style.display = 'none';
+                camposRecorrente.style.display = 'block';
+                hiddenRecorrente.value = '1';
+
+                // Preencher automaticamente o dia do vencimento se houver uma data
+                preencherDiaVencimento();
+            }
+        }
+
+        function preencherDiaVencimento() {
+            const dataVencimento = document.getElementById('data_vencimento_primeira').value;
+            if (dataVencimento) {
+                const dia = new Date(dataVencimento + 'T00:00:00').getDate();
+                document.getElementById('dia_vencimento_recorrente').value = dia;
             }
         }
 
@@ -397,8 +433,13 @@ $contas = $stmt->fetchAll();
             document.getElementById('modalTitulo').textContent = 'Nova Conta';
             document.getElementById('formAcao').value = 'adicionar';
             document.getElementById('formConta').reset();
-            document.getElementById('recorrente').checked = false;
-            document.getElementById('campos_recorrencia').style.display = 'none';
+
+            // Resetar para conta normal
+            document.querySelector('input[name="tipo_conta"][value="normal"]').checked = true;
+            document.getElementById('recorrente').value = '0';
+            document.getElementById('campos_conta_normal').style.display = 'block';
+            document.getElementById('campos_conta_recorrente').style.display = 'none';
+
             document.getElementById('modalConta').style.display = 'flex';
         }
 
@@ -412,16 +453,32 @@ $contas = $stmt->fetchAll();
             document.getElementById('formId').value = conta.id;
             document.getElementById('descricao').value = conta.descricao;
             document.getElementById('valor').value = parseFloat(conta.valor).toFixed(2).replace('.', ',');
-            document.getElementById('data_vencimento').value = conta.data_vencimento;
             document.getElementById('categoria_id').value = conta.categoria_id || '';
             document.getElementById('observacoes').value = conta.observacoes || '';
 
-            // Campos de recorrência
-            document.getElementById('recorrente').checked = conta.recorrente == 1;
-            document.getElementById('tipo_recorrencia').value = conta.tipo_recorrencia || 'mensal';
-            document.getElementById('dia_vencimento_recorrente').value = conta.dia_vencimento_recorrente || '';
-            document.getElementById('data_fim_recorrencia').value = conta.data_fim_recorrencia || '';
-            document.getElementById('campos_recorrencia').style.display = conta.recorrente == 1 ? 'block' : 'none';
+            // Determinar tipo de conta e configurar campos apropriados
+            if (conta.recorrente == 1) {
+                // É conta recorrente
+                document.querySelector('input[name="tipo_conta"][value="recorrente"]').checked = true;
+                document.getElementById('recorrente').value = '1';
+                document.getElementById('campos_conta_normal').style.display = 'none';
+                document.getElementById('campos_conta_recorrente').style.display = 'block';
+
+                // Preencher campos de recorrência
+                document.getElementById('tipo_recorrencia').value = conta.tipo_recorrencia || 'mensal';
+                document.getElementById('dia_vencimento_recorrente').value = conta.dia_vencimento_recorrente || '';
+                document.getElementById('data_vencimento_primeira').value = conta.data_vencimento || '';
+                document.getElementById('data_fim_recorrencia').value = conta.data_fim_recorrencia || '';
+            } else {
+                // É conta normal
+                document.querySelector('input[name="tipo_conta"][value="normal"]').checked = true;
+                document.getElementById('recorrente').value = '0';
+                document.getElementById('campos_conta_normal').style.display = 'block';
+                document.getElementById('campos_conta_recorrente').style.display = 'none';
+
+                // Preencher campo de vencimento normal
+                document.getElementById('data_vencimento').value = conta.data_vencimento;
+            }
 
             document.getElementById('modalConta').style.display = 'flex';
         }
